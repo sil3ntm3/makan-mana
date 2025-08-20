@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Makan Mana — v2 themed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Makan Mana — v2 themed (Responsive)</title>
 
   <!-- Leaflet (OSM maps) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
@@ -20,37 +20,106 @@
       --card:#fff; 
       --accent:#F45F67; 
       --border:#ccc; 
+      --radius:16px;
+      --pad:16px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--fg)}
-    .wrap{max-width:980px;margin:32px auto;padding:16px}
-    h1{margin:0 0 4px;font-size:32px}
-    p.small{color:var(--muted);margin:4px 0 16px}
+
+    * { box-sizing: border-box }
+    html, body { height: 100% }
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--fg);
+      padding-left: max(var(--pad), env(safe-area-inset-left));
+      padding-right: max(var(--pad), env(safe-area-inset-right));
+    }
+
+    .wrap{max-width:980px;margin:32px auto;padding-top:calc(var(--pad) + var(--safe-top));padding-bottom:calc(var(--pad) + var(--safe-bottom))}
+    h1{margin:0 0 4px;font-size:clamp(24px, 2.2vw, 32px);line-height:1.1}
+    p.small{color:var(--muted);margin:4px 0 16px;font-size:clamp(12px, 1.4vw, 14px)}
+
     .grid{display:grid;grid-template-columns:1fr;gap:12px}
-    @media (min-width:900px){ .grid{ grid-template-columns: 360px 1fr; } }
-    .panel{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}
-    .controls{display:flex;flex-direction:column;gap:10px}
-    .row{display:flex;flex-wrap:wrap;gap:8px}
+    @media (min-width: 900px){
+      .grid{grid-template-columns:360px 1fr}
+    }
+
+    .panel{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:var(--pad);
+    }
+
+    .controls{display:flex;flex-direction:column;gap:12px}
+
+    .row{display:flex;flex-wrap:wrap;gap:10px}
+    .row > label,
+    .row > button { flex: 1 1 160px }
+
     label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
-    select,input{background:#fff;color:var(--fg);border:1px solid var(--border);border-radius:999px;padding:10px;min-width:120px}
+    select,input{
+      background:#fff;color:var(--fg);
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:12px 14px;
+      min-width:120px;
+      font-size:14px;
+    }
+
     .hint{font-size:12px;color:var(--muted)}
-    button{border:0;background:var(--accent);color:#fff;padding:12px 14px;border-radius:999px;cursor:pointer}
+
+    button{
+      border:0;background:var(--accent);color:#fff;
+      padding:14px 16px;border-radius:999px;cursor:pointer;
+      font-weight:600;transition:transform .03s ease;
+      touch-action:manipulation;
+    }
+    button:active{ transform: translateY(1px) }
     button.secondary{background:#fff;color:var(--fg);border:1px solid var(--border)}
     button.warn{background:#f59e0b;color:#fff}
     button:disabled{opacity:.6;cursor:not-allowed}
-    #map{height:420px;border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+
+    /* Buttons go full-width on narrow screens for easy tapping */
+    @media (max-width: 560px){
+      .row.buttons > button { flex: 1 1 100% }
+    }
+
+    #map{
+      height: clamp(320px, 60vh, 520px);
+      border-radius:12px;overflow:hidden;border:1px solid var(--border)
+    }
+
     .result{margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff}
-    .title{font-weight:700;font-size:18px}
+    .title{font-weight:700;font-size:clamp(16px, 1.8vw, 18px)}
     .badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-    .badge{font-size:11px;color:#333;background:#eee;border:1px solid #ddd;padding:4px 8px;border-radius:999px}
+    .badge{font-size:12px;color:#333;background:#eee;border:1px solid #ddd;padding:4px 8px;border-radius:999px}
+
     .links{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    a.btn{display:inline-block;padding:10px 12px;border-radius:999px;border:1px solid var(--border);text-decoration:none;background:var(--accent);color:#fff}
+    a.btn{
+      display:inline-block;padding:10px 12px;border-radius:999px;
+      border:1px solid var(--border);text-decoration:none;background:var(--accent);color:#fff;
+      flex:1 1 180px;text-align:center
+    }
+    a.btn:focus{ outline:2px solid #00000033; outline-offset:2px }
+
     .disclaimer{font-size:12px;color:var(--muted);margin-top:8px}
     footer{color:var(--muted);font-size:12px;margin-top:12px}
-    .banner{margin:8px 0;padding:10px;border-radius:10px;border:1px solid var(--border);}
+
+    .banner{margin:8px 0;padding:10px;border-radius:10px;border:1px solid var(--border)}
     .banner.error{background:#fdd;color:#600;border-color:#7f1d1d}
     .banner.info{background:#eef;color:#112;border-color:#1f2937}
+
     .toggle{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+    /* Make controls comfy on mobile */
+    @media (max-width: 640px){
+      .wrap{margin:16px auto}
+      .panel{padding:12px}
+      select,input{font-size:16px} /* iOS prevents zoom on tap */
+    }
   </style>
 </head>
 <body>
@@ -80,9 +149,9 @@
                 <option value="fast_food">Fast food</option>
                 <option value="cafe">Cafe</option>
                 <option value="food_court">Food court</option>
-                <!-- <option value="pub">Pub</option>
+                <option value="pub">Pub</option>
                 <option value="bar">Bar</option>
-                <option value="biergarten">Biergarten</option> -->
+                <option value="biergarten">Biergarten</option>
               </select>
             </label>
           </div>
@@ -98,7 +167,7 @@
             </label>
           </div>
 
-          <div class="row">
+          <div class="row buttons">
             <button id="btnGo">I’m Hungry</button>
             <button id="btnReroll" class="secondary" disabled>Reroll (2)</button>
             <button id="btnLock" class="secondary" disabled>Lock It In</button>
@@ -219,9 +288,11 @@ function showResult(place, userLatLng){
     </div>
     ${place.tags['addr:street'] ? `<div class="hint">📍 ${place.tags['addr:street']}</div>` : ''}
     <div class="links">
-      <a class="btn" href="${gmaps}" target="_blank">Open in Google Maps</a>
+      <a class="btn" href="${osmDir}" target="_blank">Directions (OSM)</a>
       <a class="btn" href="${waze}" target="_blank">Open in Waze</a>
       <a class="btn" href="${apple}" target="_blank">Open in Apple Maps</a>
+      <a class="btn" href="${gmaps}" target="_blank">Open in Google Maps</a>
+      <a class="btn" href="${osmLink}" target="_blank">View on OSM</a>
     </div>
   `;
 }
