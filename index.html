@@ -44,9 +44,6 @@
     .row>label,.row>button{flex:1 1 160px}
     label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
     select,input{background:#fff;color:var(--fg);border:1px solid var(--border);border-radius:999px;padding:12px 14px;min-width:120px;font-size:14px}
-    /* Multi-select styling */
-    select[multiple]{border-radius:12px;padding:8px 10px;min-height:200px}
-    select[multiple] option{padding:8px 10px;border-radius:8px}
     .hint{font-size:12px;color:var(--muted)}
     button{border:0;background:var(--accent);color:#fff;padding:14px 16px;border-radius:999px;cursor:pointer;font-weight:600}
     button.secondary{background:#fff;color:var(--fg);border:1px solid var(--border)}
@@ -69,7 +66,9 @@
 <body>
   <div class="wrap">
     <h1>Makan Mana?!</h1>
-    <p class="small">Soalan paling susah sepanjang zaman. Jangan risau. Pilih kawasan dan tekan butang!.<br>Lokasi restoran anda akan dipilih secara random dan anda mesti makan di kedai tersebut!. Selamat menjamu selera.</p>
+    <p class="small">Soalan abadi: Makan mana?! 🤔
+<br></nr>Senang je, pilih Radius, Type, tekan butang, dan biar Apps Makan Mana?! pilihkan restoran random untuk anda.
+<br>Rule simple: ikut je cadangan tu. Selamat menjamu selera, hero perut! 🍜🍔</p>
 
     <div id="banner" class="banner info" hidden></div>
 
@@ -95,31 +94,6 @@
                 <option value="food_court">Food court</option>
               </select>
             </label>
-          </div>
-          <div class="row">
-            <label>Cuisine (select multiple)
-              <select id="cuisine" multiple size="4">
-                <option value="unspecified">(Unspecified)</option>
-                <option value="malay">Malay</option>
-                <option value="thai">Thai</option>
-                <option value="indian">Indian</option>
-                <option value="chinese">Chinese</option>
-                <option value="western">Western</option>
-                <option value="japanese">Japanese</option>
-                <option value="korean">Korean</option>
-                <option value="seafood">Seafood</option>
-                <option value="burger">Burger</option>
-                <option value="pizza">Pizza</option>
-                <option value="vegetarian">Vegetarian</option>
-                <option value="dessert">Dessert</option>
-                <option value="coffee_shop">Coffee shop</option>
-                <option value="noodles">Noodles</option>
-              </select>
-              <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
-                <button type="button" id="btnCuisineAll" class="secondary" style="flex:1">Select All</button>
-                <button type="button" id="btnCuisineClear" class="secondary" style="flex:1">Clear</button>
-              </div>
-            </label>
             <label>Open now
               <select id="openNow">
                 <option value="">Any</option>
@@ -133,7 +107,6 @@
             <button id="btnLock" type="button" class="secondary" disabled>Lock It In</button>
           </div>
           <button id="btnUsePin" type="button" class="warn">Use Map Pin Instead of GPS</button>
-          <div class="hint">Tip: Hold Ctrl/Cmd to select multiple cuisines. If none selected, I’ll search all cuisines.</div>
         </div>
       </div>
 
@@ -182,39 +155,12 @@ function haversine(lat1,lon1,lat2,lon2){
   const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
   return 2*R*Math.asin(Math.sqrt(a));
 }
-function getSelectedCuisines(){
-  const sel = document.getElementById('cuisine');
-  return Array.from(sel.selectedOptions).map(o=>o.value).filter(Boolean);
-}
-function buildOverpassQuery({lat,lng,radius,type,cuisines}){
+function buildOverpassQuery({lat,lng,radius,type}){
   const around=`around:${radius},${lat},${lng}`;
   const types=['node','way','relation'];
   const amenity={restaurant:'restaurant',cafe:'cafe',fast_food:'fast_food',food_court:'food_court'}[type]||'restaurant';
-
-  // Cuisine filter:
-  // - If "unspecified" selected: include items without cuisine tag (!cuisine)
-  // - If other cuisines selected: OR them via regex
-  // - If both selected: combine with '|' inside a single [ ... ] group
-  let cuisineFilter = '';
-  if (cuisines && cuisines.length){
-    const hasUnspecified = cuisines.includes('unspecified');
-    const others = cuisines.filter(c=>c!=='unspecified');
-
-    let parts = [];
-    if (others.length){
-      const pattern = others.map(c=>c.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&')).join('|');
-      parts.push(`cuisine~"${pattern}",i`);
-    }
-    if (hasUnspecified){
-      parts.push('!cuisine');
-    }
-    if (parts.length){
-      cuisineFilter = `[${parts.join('|')}]`;
-    }
-  }
-
   return `[out:json][timeout:25];
-(${types.map(t=>`${t}(${around})[amenity=${amenity}]${cuisineFilter};`).join('\n')});
+(${types.map(t=>`${t}(${around})[amenity=${amenity}];`).join('\n')});
 out center tags;`;
 }
 async function overpass(q){
@@ -277,7 +223,6 @@ async function run(){
 
     const radius = Number(document.getElementById('radius').value);
     const type   = document.getElementById('type').value;
-    const cuisines = getSelectedCuisines();
 
     const loc = await getLocation();lastLoc = loc;
 
@@ -287,7 +232,7 @@ async function run(){
     if(circle) circle.remove();
     circle = L.circle([loc.lat,loc.lng],{radius,color:'#333'}).addTo(map);
 
-    const q = buildOverpassQuery({lat:loc.lat,lng:loc.lng,radius,type,cuisines});
+    const q = buildOverpassQuery({lat:loc.lat,lng:loc.lng,radius,type});
     const data = await overpass(q);
 
     candidates = (data.elements||[])
@@ -348,17 +293,6 @@ btnLock.addEventListener('click', e=>{
   setBanner('✅ Locked in! Selamat makan dan jangan tukar lokasi ya. 😋');
   btnLock.disabled=true;
   btnReroll.disabled=true;
-});
-// Cuisine Select All / Clear
-document.getElementById('btnCuisineAll').addEventListener('click', ()=>{
-  const sel=document.getElementById('cuisine');
-  const allSelected = Array.from(sel.options).every(o=>o.selected);
-  // Toggle behavior: if already all selected, clear; else select all
-  Array.from(sel.options).forEach(opt=>opt.selected=!allSelected);
-});
-document.getElementById('btnCuisineClear').addEventListener('click', ()=>{
-  const sel=document.getElementById('cuisine');
-  Array.from(sel.options).forEach(opt=>opt.selected=false);
 });
 </script>
 </body>
