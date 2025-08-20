@@ -3,16 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Makan Mana — Debug Build</title>
+  <title>Makan Mana</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/opening_hours@3.10.0/opening_hours.min.js"></script>
   <style>
     body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0b0b0b;color:#f3f3f3}
-    .wrap{max-width:980px;margin:32px auto;padding:16px}
-    .grid{display:grid;grid-template-columns:1fr;gap:12px}
-    @media (min-width:900px){ .grid{ grid-template-columns: 360px 1fr; } }
-    .panel{background:#151515;border:1px solid #262626;border-radius:16px;padding:16px}
+    .wrap{max-width:900px;margin:32px auto;padding:16px}
+    .panel{background:#151515;border:1px solid #262626;border-radius:16px;padding:16px;margin-bottom:20px}
     .row{display:flex;gap:8px;flex-wrap:wrap}
     label{font-size:12px;color:#9aa0a6;display:flex;flex-direction:column;gap:6px}
     select,input,button{background:#111;color:#f3f3f3;border:1px solid #262626;border-radius:999px;padding:10px}
@@ -20,71 +17,49 @@
     #map{height:420px;border-radius:12px;border:1px solid #262626}
     .result{margin-top:12px;padding:12px;border:1px solid #262626;border-radius:12px;background:#111}
     .badge{font-size:11px;color:#e2e8f0;background:#1f2937;border:1px solid #334155;padding:4px 8px;border-radius:999px;margin-right:6px}
-    .ok{color:#22c55e} .warn{color:#f59e0b} .err{color:#ef4444}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;white-space:pre-wrap}
   </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Makan Mana — Debug Build</h1>
-  <p>This build shows diagnostics so we can see why “nothing happens”.</p>
-
-  <div class="grid">
-    <div class="panel">
-      <div class="row">
-        <label>Radius
-          <select id="radius">
-            <option value="1000" selected>1 km</option>
-            <option value="2000">2 km</option>
-            <option value="3000">3 km</option>
-          </select>
-        </label>
-        <label>Type
-          <select id="type">
-            <option value="restaurant" selected>Restaurant</option>
-            <option value="cafe">Cafe</option>
-            <option value="fast_food">Fast food</option>
-          </select>
-        </label>
-      </div>
-      <div class="row">
-        <label>Keyword
-          <input id="keyword" placeholder="optional"/>
-        </label>
-        <label>Open now
-          <select id="openNow">
-            <option value="">Any</option>
-            <option value="1" selected>Yes</option>
-          </select>
-        </label>
-      </div>
-      <div class="row">
-        <button id="btnGo" class="primary">I’m Hungry</button>
-        <button id="btnPin">Use Map Pin</button>
-        <button id="btnTestGeo">Test Geolocation</button>
-        <button id="btnClearPerms">How to allow location</button>
-      </div>
-      <div id="diag" class="result mono"></div>
+  <h1>Makan Mana</h1>
+  <div class="panel">
+    <div class="row">
+      <label>Radius
+        <select id="radius">
+          <option value="1000" selected>1 km</option>
+          <option value="2000">2 km</option>
+          <option value="3000">3 km</option>
+        </select>
+      </label>
+      <label>Type
+        <select id="type">
+          <option value="restaurant" selected>Restaurant</option>
+          <option value="cafe">Cafe</option>
+          <option value="fast_food">Fast food</option>
+        </select>
+      </label>
+      <label>Keyword
+        <input id="keyword" placeholder="optional"/>
+      </label>
+      <label>Open now
+        <select id="openNow">
+          <option value="">Any</option>
+          <option value="1">Yes</option>
+        </select>
+      </label>
     </div>
-    <div class="panel">
-      <div id="map"></div>
-      <div id="result" class="result"></div>
+    <div class="row" style="margin-top:10px">
+      <button id="btnGo" class="primary">I’m Hungry</button>
+      <button id="btnPin">Use Map Pin Instead</button>
     </div>
+  </div>
+  <div class="panel">
+    <div id="map"></div>
+    <div id="result" class="result"></div>
   </div>
 </div>
 
 <script>
-const diag = (msg) => {
-  const el = document.getElementById('diag');
-  const ts = new Date().toLocaleTimeString();
-  el.textContent += `[${ts}] ${msg}\n`;
-};
-
-// Basic environment checks
-diag('Page URL: ' + location.href);
-diag('Protocol: ' + location.protocol + (location.protocol==='https:' ? ' (HTTPS ✅)' : location.protocol==='http:' ? ' (HTTP on localhost ✅ if localhost)' : ' (may block geolocation ❌)'));
-diag('User agent: ' + navigator.userAgent);
-
 let map = L.map('map', { zoomControl: true });
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
 map.setView([3.1390, 101.6869], 12);
@@ -92,10 +67,9 @@ map.setView([3.1390, 101.6869], 12);
 let userMarker, pickMarker, circle;
 let usePin = false;
 
-document.getElementById('btnPin').onclick = () => { usePin = true; diag('Pin mode ON. Your location will be map center.'); alert('Pin mode ON. Move the map so the center is your location, then click “I’m Hungry”.'); };
-
-document.getElementById('btnClearPerms').onclick = () => {
-  alert('If location is blocked:\n- Click the padlock icon in the address bar\n- Site settings → Location → Allow\n- Reload the page\nOn iPhone: Settings → Privacy & Security → Location Services → Safari Websites → While Using.');
+document.getElementById('btnPin').onclick = () => { 
+  usePin = true; 
+  alert('Pin mode ON. Move the map so the center is your location, then click “I’m Hungry”.'); 
 };
 
 async function getLocation(){
@@ -107,7 +81,7 @@ async function getLocation(){
     if (!navigator.geolocation) return reject('Geolocation unsupported');
     navigator.geolocation.getCurrentPosition(
       pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, via: 'gps' }),
-      err => reject(err.message || 'Permission/timeout'),
+      err => reject(err.message||'Permission/timeout'),
       { enableHighAccuracy: true, timeout: 15000 }
     );
   });
@@ -140,24 +114,19 @@ async function overpass(q){
     'https://overpass.kumi.systems/api/interpreter',
     'https://z.overpass-api.de/api/interpreter'
   ];
-  let lastErr=null;
   for (const u of urls){
     try {
-      diag('Overpass POST: ' + u);
       const resp = await fetch(u, { method:'POST', body:q, headers:{'Content-Type':'text/plain'} });
       if(!resp.ok) throw new Error('HTTP '+resp.status);
-      const data = await resp.json();
-      diag('Overpass OK at ' + u + ' elements=' + (data.elements?.length||0));
-      return data;
+      return await resp.json();
     } catch(e){
-      diag('Overpass failed at ' + u + ': ' + (e.message||e));
-      lastErr = e;
+      console.warn('Overpass failed at', u, e);
     }
   }
-  throw lastErr || new Error('All Overpass endpoints failed');
+  throw new Error('All Overpass endpoints failed');
 }
 
-async function run(reroll=false){
+async function run(){
   try{
     document.getElementById('result').textContent='';
     const radius = Number(document.getElementById('radius').value);
@@ -166,7 +135,6 @@ async function run(reroll=false){
     const openNow = document.getElementById('openNow').value === '1';
 
     const loc = await getLocation();
-    diag('Location via ' + loc.via + ': ' + loc.lat.toFixed(5) + ',' + loc.lng.toFixed(5));
     if (!userMarker) userMarker = L.marker([loc.lat, loc.lng], { title:'You' }).addTo(map);
     userMarker.setLatLng([loc.lat, loc.lng]);
     map.setView([loc.lat, loc.lng], 15);
@@ -175,31 +143,23 @@ async function run(reroll=false){
 
     const q = buildOverpassQuery({lat:loc.lat, lng:loc.lng, radius, type, keyword});
     const data = await overpass(q);
-    const list = (data.elements||[]).map(e => ({ id:e.id, type:e.type, lat:e.lat||e.center?.lat, lon:e.lon||e.center?.lon, tags:e.tags||{} })).filter(e=>e.lat && e.lon);
-    diag('Candidates: ' + list.length);
+    const list = (data.elements||[]).map(e => ({ id:e.id, lat:e.lat||e.center?.lat, lon:e.lon||e.center?.lon, tags:e.tags||{} })).filter(e=>e.lat && e.lon);
     if(!list.length){ document.getElementById('result').textContent='No places found.'; return; }
 
-    const withDistance = list.map(p => ({...p, _distance: haversine(loc.lat, loc.lng, p.lat, p.lon), _hasName: p.tags.name?1:0, _hasCuisine: p.tags.cuisine?1:0 }));
-    withDistance.sort((a,b)=>a._distance-b._distance);
-    const pick = withDistance[0]; // simplest for debug: nearest
+    const pick = list[Math.floor(Math.random()*list.length)];
     if (pickMarker) pickMarker.remove();
     pickMarker = L.marker([pick.lat, pick.lon], { title: pick.tags.name||'Pick' }).addTo(map);
     map.panTo([pick.lat, pick.lon]);
-    document.getElementById('result').innerHTML = '<div><span class="badge">Nearest</span> ' + (pick.tags.name||'(Unnamed)') + ' — ' + Math.round(pick._distance) + ' m</div>';
+    document.getElementById('result').innerHTML = 
+      '<div><span class="badge">Chosen</span> ' + (pick.tags.name||'(Unnamed)') + '</div>' +
+      (pick.tags.cuisine?'<div>Cuisine: '+pick.tags.cuisine+'</div>':'') +
+      (pick.tags['addr:street']?'<div>Street: '+pick.tags['addr:street']+'</div>':'');
   }catch(e){
-    diag('ERROR: ' + (e.message||e));
-    document.getElementById('result').innerHTML = '<div class="err">Error: ' + (e.message||e) + '</div>';
+    document.getElementById('result').innerHTML = '<div style="color:#ef4444">Error: '+(e.message||e)+'</div>';
   }
 }
 
-document.getElementById('btnGo').onclick = () => run(false);
-document.getElementById('btnTestGeo').onclick = async () => {
-  try{
-    const loc = await getLocation();
-    diag('Geolocation ok: ' + JSON.stringify(loc));
-    alert('Geolocation OK: ' + loc.lat.toFixed(5) + ',' + loc.lng.toFixed(5) + ' via ' + loc.via);
-  }catch(e){ diag('Geo fail: ' + (e.message||e)); alert('Geolocation failed: ' + (e.message||e)); }
-};
+document.getElementById('btnGo').onclick = run;
 </script>
 </body>
 </html>
