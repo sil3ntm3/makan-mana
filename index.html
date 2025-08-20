@@ -80,9 +80,9 @@
                 <option value="fast_food">Fast food</option>
                 <option value="cafe">Cafe</option>
                 <option value="food_court">Food court</option>
-                <option value="pub">Pub</option>
+                <!-- <option value="pub">Pub</option>
                 <option value="bar">Bar</option>
-                <option value="biergarten">Biergarten</option>
+                <option value="biergarten">Biergarten</option> -->
               </select>
             </label>
           </div>
@@ -219,11 +219,9 @@ function showResult(place, userLatLng){
     </div>
     ${place.tags['addr:street'] ? `<div class="hint">📍 ${place.tags['addr:street']}</div>` : ''}
     <div class="links">
-      <a class="btn" href="${osmDir}" target="_blank">Directions (OSM)</a>
+      <a class="btn" href="${gmaps}" target="_blank">Open in Google Maps</a>
       <a class="btn" href="${waze}" target="_blank">Open in Waze</a>
       <a class="btn" href="${apple}" target="_blank">Open in Apple Maps</a>
-      <a class="btn" href="${gmaps}" target="_blank">Open in Google Maps</a>
-      <a class="btn" href="${osmLink}" target="_blank">View on OSM</a>
     </div>
   `;
 }
