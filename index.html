@@ -114,6 +114,10 @@
                 <option value="coffee_shop">Coffee shop</option>
                 <option value="noodles">Noodles</option>
               </select>
+              <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
+                <button type="button" id="btnCuisineAll" class="secondary" style="flex:1">Select All</button>
+                <button type="button" id="btnCuisineClear" class="secondary" style="flex:1">Clear</button>
+              </div>
             </label>
             <label>Open now
               <select id="openNow">
@@ -151,7 +155,7 @@ map.setView([3.139,101.6869],13);
 let userMarker, pickMarker, circle;
 let usePin=false;
 
-// --- App State for buttons ---
+// --- App State ---
 let candidates = [];     
 let currentPick = null;  
 let lastLoc = null;      
@@ -171,25 +175,20 @@ function setBanner(text, kind='info'){
   elBanner.className = `banner ${kind}`;
   elBanner.hidden = false;
 }
-
 function haversine(lat1,lon1,lat2,lon2){
   const R=6371000;const toRad=x=>x*Math.PI/180;
   const dLat=toRad(lat2-lat1),dLon=toRad(lon2-lon1);
   const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
   return 2*R*Math.asin(Math.sqrt(a));
 }
-
-// read multiple selected cuisines -> ["malay","thai",...]
 function getSelectedCuisines(){
   const sel = document.getElementById('cuisine');
   return Array.from(sel.selectedOptions).map(o=>o.value).filter(Boolean);
 }
-
 function buildOverpassQuery({lat,lng,radius,type,cuisines}){
   const around=`around:${radius},${lat},${lng}`;
   const types=['node','way','relation'];
   const amenity={restaurant:'restaurant',cafe:'cafe',fast_food:'fast_food',food_court:'food_court'}[type]||'restaurant';
-  // Build cuisine filter: if multiple selected, OR them with a regex
   let cuisineFilter = '';
   if (cuisines && cuisines.length){
     const pattern = cuisines.map(c=>c.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&')).join('|');
@@ -199,7 +198,6 @@ function buildOverpassQuery({lat,lng,radius,type,cuisines}){
 (${types.map(t=>`${t}(${around})[amenity=${amenity}]${cuisineFilter};`).join('\n')});
 out center tags;`;
 }
-
 async function overpass(q){
   const urls=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://z.overpass-api.de/api/interpreter'];
   for(const u of urls){
@@ -210,15 +208,9 @@ async function overpass(q){
   }
   throw new Error('All Overpass endpoints failed');
 }
-
-// Render result card
 function showResult(place,userLatLng){
   const el=elResult;
-  if(!place){
-    el.hidden=false;
-    el.textContent='No places found.';
-    return;
-  }
+  if(!place){el.hidden=false;el.textContent='No places found.';return;}
   const dist=Math.round(place._distance);
   const name=place.tags.name||'(Unnamed place)';
   const cuisine=place.tags.cuisine?String(place.tags.cuisine).split(';').join(', '):'—';
@@ -242,8 +234,6 @@ function showResult(place,userLatLng){
       <a class="btn" href="${gmaps}" target="_blank">Open in Google Maps</a>
     </div>`;
 }
-
-// pick + map UI
 function setPick(pick){
   currentPick = pick;
   if(!pick || !lastLoc){ btnLock.disabled = true; return; }
@@ -255,68 +245,34 @@ function setPick(pick){
   btnReroll.disabled = rerollsLeft <= 0 || (candidates.length <= 1);
   btnReroll.textContent = `Reroll (${rerollsLeft})`;
 }
-
 function randomDifferentPick(){
   if(!candidates.length) return null;
   if(candidates.length === 1) return candidates[0];
   let p;
-  for(let i=0;i<5;i++){
-    p = candidates[Math.floor(Math.random()*candidates.length)];
-    if(!currentPick || p.id !== currentPick.id) break;
-  }
+  for(let i=0;i<5;i++){p=candidates[Math.floor(Math.random()*candidates.length)];if(!currentPick || p.id!==currentPick.id) break;}
   return p;
 }
-
-// --- Main Run ---
 async function run(){
   try{
-    setBanner('');
-    btnLock.disabled = true;
-    btnReroll.disabled = true;
-
+    setBanner('');btnLock.disabled = true;btnReroll.disabled = true;
     const radius = Number(document.getElementById('radius').value);
     const type   = document.getElementById('type').value;
     const cuisines = getSelectedCuisines();
-
-    const loc = await getLocation();
-    lastLoc = loc;
-
+    const loc = await getLocation();lastLoc = loc;
     if(!userMarker) userMarker = L.marker([loc.lat,loc.lng],{title:'You'}).addTo(map);
-    userMarker.setLatLng([loc.lat,loc.lng]);
-    map.setView([loc.lat,loc.lng],15);
-
+    userMarker.setLatLng([loc.lat,loc.lng]);map.setView([loc.lat,loc.lng],15);
     if(circle) circle.remove();
     circle = L.circle([loc.lat,loc.lng],{radius,color:'#333'}).addTo(map);
-
     const q = buildOverpassQuery({lat:loc.lat,lng:loc.lng,radius,type,cuisines});
     const data = await overpass(q);
-
-    candidates = (data.elements||[])
-      .map(e=>({id:e.id,lat:e.lat||e.center?.lat,lon:e.lon||e.center?.lon,tags:e.tags||{}}))
-      .filter(e=>e.lat&&e.lon);
-
+    candidates = (data.elements||[]).map(e=>({id:e.id,lat:e.lat||e.center?.lat,lon:e.lon||e.center?.lon,tags:e.tags||{}})).filter(e=>e.lat&&e.lon);
     candidates.forEach(p=>p._distance=haversine(loc.lat,loc.lng,p.lat,p.lon));
-
-    if(!candidates.length){
-      showResult(null, loc);
-      setBanner('No places found in that area with those filters.', 'error');
-      return;
-    }
-
-    rerollsLeft = 2;
-    const firstPick = randomDifferentPick();
-    setPick(firstPick);
-  }catch(e){
-    elResult.hidden = false;
-    elResult.innerHTML = '<div style="color:#c00">Error: '+(e.message||e)+'</div>';
-  }
+    if(!candidates.length){showResult(null, loc);setBanner('No places found in that area with those filters.','error');return;}
+    rerollsLeft = 2;setPick(randomDifferentPick());
+  }catch(e){elResult.hidden=false;elResult.innerHTML='<div style="color:#c00">Error: '+(e.message||e)+'</div>';}
 }
-
 function getLocation(){
-  if(usePin){
-    const c=map.getCenter();
-    return Promise.resolve({lat:c.lat,lng:c.lng});
-  }
+  if(usePin){const c=map.getCenter();return Promise.resolve({lat:c.lat,lng:c.lng});}
   return new Promise((res,rej)=>{
     if(!navigator.geolocation) return rej('Geolocation unsupported');
     navigator.geolocation.getCurrentPosition(
@@ -329,37 +285,24 @@ function getLocation(){
 
 // --- Buttons ---
 btnGo.addEventListener('click', run);
-
-document.getElementById('btnUsePin').addEventListener('click', ()=>{
-  usePin = true;
-  alert('Pin mode ON. Move map, then press “I’m Hungry”.');
-});
-
-btnReroll.addEventListener('click', (e)=>{
-  e.preventDefault();
-  if(rerollsLeft <= 0) return;
-  const next = randomDifferentPick();
-  if(next){
-    rerollsLeft--;
-    setPick(next);
-  }
-});
-
-btnLock.addEventListener('click', (e)=>{
-  e.preventDefault();
-  if(!currentPick) return;
-  const history = JSON.parse(localStorage.getItem('lockedChoices')||'[]');
-  history.push({
-    id: currentPick.id,
-    name: currentPick.tags.name || '(Unnamed place)',
-    lat: currentPick.lat,
-    lon: currentPick.lon,
-    at: new Date().toISOString()
-  });
-  localStorage.setItem('lockedChoices', JSON.stringify(history));
+document.getElementById('btnUsePin').addEventListener('click', ()=>{usePin=true;alert('Pin mode ON. Move map, then press “I’m Hungry”.');});
+btnReroll.addEventListener('click', e=>{e.preventDefault();if(rerollsLeft<=0) return;const next=randomDifferentPick();if(next){rerollsLeft--;setPick(next);}});
+btnLock.addEventListener('click', e=>{
+  e.preventDefault();if(!currentPick) return;
+  const history=JSON.parse(localStorage.getItem('lockedChoices')||'[]');
+  history.push({id:currentPick.id,name:currentPick.tags.name||'(Unnamed place)',lat:currentPick.lat,lon:currentPick.lon,at:new Date().toISOString()});
+  localStorage.setItem('lockedChoices',JSON.stringify(history));
   setBanner('✅ Locked in! Selamat makan dan jangan tukar lokasi ya. 😋');
-  btnLock.disabled = true;
-  btnReroll.disabled = true;
+  btnLock.disabled=true;btnReroll.disabled=true;
+});
+// Cuisine Select All / Clear
+document.getElementById('btnCuisineAll').addEventListener('click', ()=>{
+  const sel=document.getElementById('cuisine');
+  Array.from(sel.options).forEach(opt=>opt.selected=true);
+});
+document.getElementById('btnCuisineClear').addEventListener('click', ()=>{
+  const sel=document.getElementById('cuisine');
+  Array.from(sel.options).forEach(opt=>opt.selected=false);
 });
 </script>
 </body>
