@@ -200,6 +200,26 @@ function showResult(place, userLatLng){
   const waze = `https://waze.com/ul?ll=${lat}%2C${lon}&navigate=yes`;
   const osmDir = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${userLatLng.lat}%2C${userLatLng.lng}%3B${lat}%2C${lon}`;
   const apple = `https://maps.apple.com/?daddr=${lat},${lon}`;
+  const gmaps = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
+
+  elResult.hidden=false;
+  elResult.innerHTML = `
+    <div class="title">${name}</div>
+    <div class="badges">
+      <span class="badge">cuisine: ${cuisine}</span>
+      <span class="badge">${dist} m away</span>
+      <span class="badge">${openStr}</span>
+    </div>
+    ${place.tags['addr:street'] ? `<div class="hint">📍 ${place.tags['addr:street']}</div>` : ''}
+    <div class="links">
+      <a class="btn" href="${osmDir}" target="_blank">Directions (OSM)</a>
+      <a class="btn" href="${waze}" target="_blank">Open in Waze</a>
+      <a class="btn" href="${apple}" target="_blank">Open in Apple Maps</a>
+      <a class="btn" href="${gmaps}" target="_blank">Open in Google Maps</a>
+      <a class="btn" href="${osmLink}" target="_blank">View on OSM</a>
+    </div>
+  `;
+
 
   elResult.hidden=false;
   elResult.innerHTML = `
