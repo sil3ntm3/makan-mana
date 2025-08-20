@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Makan Mana??!</title>
+  <title>Makan Mana</title>
 
   <!-- Leaflet (OSM maps) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
@@ -65,8 +65,8 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>Makan Mana?!</h1>
-    <p class="small">Soalan paling susah sepanjang zaman. Jangan Risau!. Pilih kawasan dan tekan. Mesti pilih tempat makan tu!. Baru syiok.</p>
+    <h1>Makan Mana</h1>
+    <p class="small">Tap the button. Eat what fate decides — powered by OpenStreetMap.</p>
 
     <div id="banner" class="banner info" hidden></div>
 
@@ -118,44 +118,33 @@
       <div class="panel">
         <div id="map"></div>
         <div id="result" class="result" hidden></div>
-        <div class="disclaimer"><!--Places from OpenStreetMap via Overpass API. -->Data quality varies by area. Please verify halal status and opening hours.</div>
+        <div class="disclaimer">Places from OpenStreetMap via Overpass API. Data quality varies by area. Please verify halal status and opening hours.</div>
       </div>
     </div>
 
-    <footer>Powered by OpenStreetMap. Made by Syazani Said.</footer>
+    <footer>Tiles © OpenStreetMap contributors • Map style by CARTO</footer>
   </div>
 
 <script>
-/* same JS as before, only change: removed OSM buttons in showResult */
-function showResult(place, userLatLng){
-  const elResult = document.getElementById('result');
-  if(!place){elResult.hidden=false;elResult.innerHTML='No places found.';return;}
-  const dist=Math.round(place._distance);
-  const name=place.tags.name||'(Unnamed place)';
-  const cuisine=place.tags.cuisine?String(place.tags.cuisine).split(';').join(', '):'—';
-  const isOpen=(function(tag){try{if(!tag)return null;return new opening_hours(tag).getState();}catch(e){return null;}})(place.tags['opening_hours']);
-  const openStr=(isOpen===null)?'hours unknown':(isOpen?'open now':'closed now');
-  const lat=place.lat,lon=place.lon;
-  const waze=`https://waze.com/ul?ll=${lat}%2C${lon}&navigate=yes`;
-  const apple=`https://maps.apple.com/?daddr=${lat},${lon}`;
-  const gmaps=`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
-  elResult.hidden=false;
-  elResult.innerHTML=`
-    <div class="title">${name}</div>
-    <div class="badges">
-      <span class="badge">cuisine: ${cuisine}</span>
-      <span class="badge">${dist} m away</span>
-      <span class="badge">${openStr}</span>
-    </div>
-    <div class="links">
-      <a class="btn" href="${waze}" target="_blank">Open in Waze</a>
-      <a class="btn" href="${apple}" target="_blank">Open in Apple Maps</a>
-      <a class="btn" href="${gmaps}" target="_blank">Open in Google Maps</a>
-    </div>
-  `;
-}
+// --- Map Init ---
+let map=L.map('map');L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'©OSM ©CARTO'}).addTo(map);map.setView([3.139,101.6869],13);
+let userMarker,pickMarker,circle;let usePin=false;
 
-/* rest of JS (geolocation, overpass, reroll, etc.) unchanged */
+// --- Helpers ---
+function haversine(lat1,lon1,lat2,lon2){const R=6371000;const toRad=x=>x*Math.PI/180;const dLat=toRad(lat2-lat1),dLon=toRad(lon2-lon1);const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(a));}
+function buildOverpassQuery({lat,lng,radius,type,keyword}){const around=`around:${radius},${lat},${lng}`;const types=['node','way','relation'];const amenity={restaurant:'restaurant',cafe:'cafe',fast_food:'fast_food',food_court:'food_court'}[type]||'restaurant';const kw=keyword?`[(name~\"${keyword}\",i)|(cuisine~\"${keyword}\",i)]`:'';return`[out:json][timeout:25];(${types.map(t=>`${t}(${around})[amenity=${amenity}]${kw};`).join('\n')});out center tags;`;}
+async function overpass(q){const urls=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://z.overpass-api.de/api/interpreter'];for(const u of urls){try{const r=await fetch(u,{method:'POST',body:q,headers:{'Content-Type':'text/plain'}});if(r.ok)return await r.json();}catch(e){console.warn('Overpass fail',u,e);}}throw new Error('All Overpass endpoints failed');}
+
+// --- UI ---
+function showResult(place,userLatLng){const el=document.getElementById('result');if(!place){el.hidden=false;el.textContent='No places found.';return;}const dist=Math.round(place._distance);const name=place.tags.name||'(Unnamed place)';const cuisine=place.tags.cuisine?String(place.tags.cuisine).split(';').join(', '):'—';const isOpen=(function(tag){try{if(!tag)return null;return new opening_hours(tag).getState();}catch(e){return null;}})(place.tags['opening_hours']);const openStr=(isOpen===null)?'hours unknown':(isOpen?'open now':'closed now');const lat=place.lat,lon=place.lon;const waze=`https://waze.com/ul?ll=${lat}%2C${lon}&navigate=yes`;const apple=`https://maps.apple.com/?daddr=${lat},${lon}`;const gmaps=`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;el.hidden=false;el.innerHTML=`<div class="title">${name}</div><div class="badges"><span class="badge">cuisine: ${cuisine}</span><span class="badge">${dist} m away</span><span class="badge">${openStr}</span></div><div class="links"><a class="btn" href="${waze}" target="_blank">Open in Waze</a><a class="btn" href="${apple}" target="_blank">Open in Apple Maps</a><a class="btn" href="${gmaps}" target="_blank">Open in Google Maps</a></div>`;}
+
+// --- Main Run ---
+async function run(){try{const radius=Number(document.getElementById('radius').value);const type=document.getElementById('type').value;const keyword=document.getElementById('keyword').value.trim();const loc=await getLocation();if(!userMarker)userMarker=L.marker([loc.lat,loc.lng],{title:'You'}).addTo(map);userMarker.setLatLng([loc.lat,loc.lng]);map.setView([loc.lat,loc.lng],15);if(circle)circle.remove();circle=L.circle([loc.lat,loc.lng],{radius,color:'#333'}).addTo(map);const q=buildOverpassQuery({lat:loc.lat,lng:loc.lng,radius,type,keyword});const data=await overpass(q);const list=(data.elements||[]).map(e=>({id:e.id,lat:e.lat||e.center?.lat,lon:e.lon||e.center?.lon,tags:e.tags||{}})).filter(e=>e.lat&&e.lon);list.forEach(p=>p._distance=haversine(loc.lat,loc.lng,p.lat,p.lon));if(!list.length){showResult(null,loc);return;}const pick=list[Math.floor(Math.random()*list.length)];if(pickMarker)pickMarker.remove();pickMarker=L.marker([pick.lat,pick.lon],{title:pick.tags.name||'Pick'}).addTo(map);map.panTo([pick.lat,pick.lon]);showResult(pick,loc);}catch(e){document.getElementById('result').hidden=false;document.getElementById('result').innerHTML='<div style="color:#c00">Error: '+(e.message||e)+'</div>';}}
+function getLocation(){if(usePin){const c=map.getCenter();return Promise.resolve({lat:c.lat,lng:c.lng});}return new Promise((res,rej)=>{if(!navigator.geolocation)return rej('Geolocation unsupported');navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lng:p.coords.longitude}),e=>rej(e.message||'Permission/timeout'),{enableHighAccuracy:true,timeout:15000});});}
+
+// --- Buttons ---
+document.getElementById('btnGo').onclick=run;
+document.getElementById('btnUsePin').onclick=()=>{usePin=true;alert('Pin mode ON. Move map, then press “I’m Hungry”.');};
 </script>
 </body>
 </html>
