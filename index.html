@@ -26,6 +26,17 @@
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
     *{box-sizing:border-box}
+
+    @media only screen and (max-width: 600px) {
+  body {
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      background:var(--bg);color:var(--fg);
+      padding-left:max(var(--pad),env(safe-area-inset-left));
+      padding-right:max(var(--pad),env(safe-area-inset-right));
+      margin-top:-30px;
+  }
+}
     body{
       margin:0;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
