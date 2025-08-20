@@ -67,8 +67,8 @@
   <div class="wrap">
     <h1>Makan Mana?!</h1>
     <p class="small">Soalan abadi: Makan mana?! 🤔
-<br>Senang je, pilih Radius, Type, tekan butang, dan biar Apps Makan Mana?! pilihkan restoran random untuk anda.
-<br>Rule simple: ikut je cadangan tu. Selamat menjamu selera! 🍜🍔</p>
+<br>Senang je, pilih <b>Radius</b>, <b>Jenis</b>, tekan butang <b>Makan Mana?!</b> dan pilihan restoran secara random diberikan pada anda.
+<br>Rule simple: ikut je cadangan tu.<br>Selamat menjamu selera! 🍜🍔</p>
 
     <div id="banner" class="banner info" hidden></div>
 
@@ -86,27 +86,27 @@
                 <option value="5000">5 km</option>
               </select>
             </label>
-            <label>Type
+            <label>Jenis
               <select id="type">
-                <option value="restaurant" selected>Restaurant</option>
-                <option value="fast_food">Fast food</option>
-                <option value="cafe">Cafe</option>
-                <option value="food_court">Food court</option>
+                <option value="restaurant" selected>Restoran</option>
+                <option value="fast_food">Makanan Segera</option>
+                <option value="cafe">Kafe</option>
+                <option value="food_court">Medan Selera</option>
               </select>
             </label>
-            <label>Open now
+            <label>Kedai Buka Sekarang
               <select id="openNow">
-                <option value="">Any</option>
-                <option value="1" selected>Yes</option>
+                <option value="">Tak Kisah</option>
+                <option value="1" selected>Ya</option>
               </select>
             </label>
           </div>
           <div class="row">
             <button id="btnGo" type="button">Makan Mana?!</button>
-            <button id="btnReroll" type="button" class="secondary" disabled>Reroll (2)</button>
-            <button id="btnLock" type="button" class="secondary" disabled>Lock It In</button>
+            <button id="btnReroll" type="button" class="secondary" disabled>Pilihan Lain (2)</button>
+            <button id="btnLock" type="button" class="secondary" disabled>Kunci Pilihan</button>
           </div>
-          <button id="btnUsePin" type="button" class="warn">Use Map Pin Instead of GPS</button>
+          <button id="btnUsePin" type="button" class="warn">Gunakan Pin Di Peta Daripada<br>Menggunakan GPS</button>
         </div>
       </div>
 
@@ -114,11 +114,11 @@
       <div class="panel">
         <div id="result" class="result" hidden></div>
         <div id="map"></div>
-        <div class="disclaimer">Data quality varies by area. Please verify halal status and opening hours.</div>
+        <div class="disclaimer">Data mungkin berbeza mengikut kawasan. Sila sahkan status halal dan waktu buka.</div>
       </div>
     </div>
 
-    <footer>Powered by OpenStreetMap. Made by Ts. Syazani Said.</footer>
+    <footer>Dikuasakan OpenStreetMap. Dibangunkan Oleh Ts. Syazani Said.</footer>
   </div>
 
 <script>
@@ -270,7 +270,7 @@ function getLocation(){
 btnGo.addEventListener('click', run);
 document.getElementById('btnUsePin').addEventListener('click', ()=>{
   usePin=true;
-  alert('Pin mode ON. Move map, then press “Makan Mana?!”.');
+  alert('Mode Pin ON. Gerakkan peta untuk lokasi, kemudian tekan “Makan Mana?!”.');
 });
 btnReroll.addEventListener('click', e=>{
   e.preventDefault();
