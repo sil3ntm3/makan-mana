@@ -35,11 +35,6 @@
     }
     .wrap{max-width:980px;margin:32px auto;padding-top:calc(var(--pad) + var(--safe-top));padding-bottom:calc(var(--pad) + var(--safe-bottom))}
     h1{margin:0 0 4px;font-size:clamp(24px,2.2vw,32px)}
-    /* Force bigger heading on small screens */
-@media (max-width: 600px) {
-  h1 {
-    font-size: 32px; /* you can try 34px or 36px if you want extra big */
-  }
     p.small{color:var(--muted);margin:4px 0 16px;font-size:clamp(14px,1.4vw,14px)}
     .grid{display:grid;grid-template-columns:1fr;gap:12px}
     @media(min-width:900px){.grid{grid-template-columns:360px 1fr}}
