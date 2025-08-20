@@ -3,53 +3,60 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Makan Mana — Free / No‑Google (v2)</title>
+  <title>Makan Mana — v2 themed</title>
 
   <!-- Leaflet (OSM maps) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
-  <!-- Opening hours parser for OSM `opening_hours` tags -->
+  <!-- Opening hours parser -->
   <script src="https://cdn.jsdelivr.net/npm/opening_hours@3.10.0/opening_hours.min.js"></script>
 
   <style>
-    :root { --bg:#0b0b0b; --fg:#f3f3f3; --muted:#9aa0a6; --card:#151515; --accent:#22c55e; --border:#262626; --danger:#ef4444; --warn:#f59e0b; }
+    :root { 
+      --bg:#F5DDC2; 
+      --fg:#111; 
+      --muted:#444; 
+      --card:#fff; 
+      --accent:#F45F67; 
+      --border:#ccc; 
+    }
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0b0b0b;color:#f3f3f3}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--fg)}
     .wrap{max-width:980px;margin:32px auto;padding:16px}
     h1{margin:0 0 4px;font-size:32px}
-    p.small{color:#9aa0a6;margin:4px 0 16px}
+    p.small{color:var(--muted);margin:4px 0 16px}
     .grid{display:grid;grid-template-columns:1fr;gap:12px}
     @media (min-width:900px){ .grid{ grid-template-columns: 360px 1fr; } }
-    .panel{background:#151515;border:1px solid #262626;border-radius:16px;padding:16px}
+    .panel{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}
     .controls{display:flex;flex-direction:column;gap:10px}
     .row{display:flex;flex-wrap:wrap;gap:8px}
-    label{font-size:12px;color:#9aa0a6;display:flex;flex-direction:column;gap:6px}
-    select,input{background:#111;color:#f3f3f3;border:1px solid #262626;border-radius:999px;padding:10px;min-width:120px}
-    .hint{font-size:12px;color:#9aa0a6}
-    button{border:0;background:#f3f3f3;color:#111;padding:12px 14px;border-radius:999px;cursor:pointer}
-    button.secondary{background:#111;color:#f3f3f3;border:1px solid #262626}
-    button.warn{background:#f59e0b;color:#111}
+    label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+    select,input{background:#fff;color:var(--fg);border:1px solid var(--border);border-radius:999px;padding:10px;min-width:120px}
+    .hint{font-size:12px;color:var(--muted)}
+    button{border:0;background:var(--accent);color:#fff;padding:12px 14px;border-radius:999px;cursor:pointer}
+    button.secondary{background:#fff;color:var(--fg);border:1px solid var(--border)}
+    button.warn{background:#f59e0b;color:#fff}
     button:disabled{opacity:.6;cursor:not-allowed}
-    #map{height:420px;border-radius:12px;overflow:hidden;border:1px solid #262626}
-    .result{margin-top:12px;padding:12px;border:1px solid #262626;border-radius:12px;background:#111}
+    #map{height:420px;border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+    .result{margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff}
     .title{font-weight:700;font-size:18px}
     .badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-    .badge{font-size:11px;color:#e2e8f0;background:#1f2937;border:1px solid #334155;padding:4px 8px;border-radius:999px}
+    .badge{font-size:11px;color:#333;background:#eee;border:1px solid #ddd;padding:4px 8px;border-radius:999px}
     .links{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    a.btn{display:inline-block;padding:10px 12px;border-radius:999px;border:1px solid #262626;text-decoration:none;color:#f3f3f3}
-    .disclaimer{font-size:12px;color:#9aa0a6;margin-top:8px}
-    footer{color:#9aa0a6;font-size:12px;margin-top:12px}
-    .banner{margin:8px 0;padding:10px;border-radius:10px;border:1px solid #262626;}
-    .banner.error{border-color:#7f1d1d;background:#1f0b0b;color:#fecaca}
-    .banner.info{border-color:#1f2937;background:#0b1220;color:#c7d2fe}
+    a.btn{display:inline-block;padding:10px 12px;border-radius:999px;border:1px solid var(--border);text-decoration:none;background:var(--accent);color:#fff}
+    .disclaimer{font-size:12px;color:var(--muted);margin-top:8px}
+    footer{color:var(--muted);font-size:12px;margin-top:12px}
+    .banner{margin:8px 0;padding:10px;border-radius:10px;border:1px solid var(--border);}
+    .banner.error{background:#fdd;color:#600;border-color:#7f1d1d}
+    .banner.info{background:#eef;color:#112;border-color:#1f2937}
     .toggle{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>Makan Mana</h1>
-    <p class="small">Tap the button. Eat what fate decides — powered by OpenStreetMap (free, no keys).</p>
+    <p class="small">Tap the button. Eat what fate decides — powered by OpenStreetMap.</p>
 
     <div id="banner" class="banner info" hidden></div>
 
@@ -120,7 +127,7 @@
 const clamp = (x, min, max) => Math.max(min, Math.min(x, max));
 function haversine(lat1,lon1,lat2,lon2){
   const R=6371000; const toRad=x=>x*Math.PI/180;
-  const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+  const dLat=toRad(lat2-lat1), dLon=toRad(lat2-lon1);
   const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
   return 2*R*Math.asin(Math.sqrt(a));
 }
@@ -140,13 +147,13 @@ function showBanner(text, kind='info'){
   b.hidden = false;
 }
 
-/* -------- Map init (Leaflet + OSM tiles) -------- */
+/* -------- Map init -------- */
 let map = L.map('map', { zoomControl: true });
 let userMarker, pickMarker, circle;
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   maxZoom: 19, attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
 }).addTo(map);
-map.setView([3.1390, 101.6869], 12); // default: Kuala Lumpur
+map.setView([3.1390, 101.6869], 12); // default Kuala Lumpur
 
 /* -------- State -------- */
 let rerolls = 2;
@@ -156,7 +163,7 @@ let locked = false;
 let lastQueryKey = "";
 let usePin = false;
 
-/* -------- UI elements -------- */
+/* -------- UI refs -------- */
 const elGo = document.getElementById('btnGo');
 const elReroll = document.getElementById('btnReroll');
 const elLock = document.getElementById('btnLock');
@@ -177,7 +184,7 @@ function openingHoursIsOpen(tag){
   try{
     if(!tag) return null;
     const oh = new opening_hours(tag);
-    return oh.getState(); // true/false if parseable
+    return oh.getState();
   }catch(e){
     return null;
   }
@@ -327,7 +334,7 @@ async function search(reroll=false){
 
     if(!lastList.length){ lastPick = null; showResult(null, pos); return; }
 
-    // Use opening_hours when available
+    // Filter by "open now" when parseable
     let candidates = lastList.map(p=>({
       ...p,
       _distance: haversine(pos.lat, pos.lng, p.lat, p.lon),
