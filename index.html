@@ -219,7 +219,7 @@ function setPick(pick){
   showResult(pick, lastLoc);
   btnLock.disabled = false;
   btnReroll.disabled = rerollsLeft <= 0 || (candidates.length <= 1);
-  btnReroll.textContent = `Reroll (${rerollsLeft})`;
+  btnReroll.textContent = `Pilihan Lain (${rerollsLeft})`;
 }
 function randomDifferentPick(){
   if(!candidates.length) return null;
