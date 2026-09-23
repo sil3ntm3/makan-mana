@@ -526,68 +526,62 @@
             }
 
             function buildOverpassQuery(lat, lng, radius, type) {
-                const around = `around:${radius},${lat},${lng}`;
+                // OPTIMIZATION: We map the type to the OSM amenity tag
                 const amenity = {
                     restaurant: 'restaurant', cafe: 'cafe', fast_food: 'fast_food', food_court: 'food_court'
                 }[type] || 'restaurant';
                 
-                return `[out:json][timeout:25];
-                    (
-                        node(${around})[amenity=${amenity}];
-                        way(${around})[amenity=${amenity}];
-                        relation(${around})[amenity=${amenity}];
-                    );
-                    out center tags;`;
+                // OPTIMIZATION: Use 'nwr' (node, way, relation combined) and strictly filter by places that have a '[name]' tag.
+                // This drastically reduces the server workload and the amount of data sent back to your browser!
+                return `[out:json][timeout:15];nwr(around:${radius},${lat},${lng})[amenity=${amenity}][name];out center tags;`;
             }
 
             async function fetchPlaces(lat, lng, radius, type) {
                 const q = buildOverpassQuery(lat, lng, radius, type);
-                const encodedQuery = encodeURIComponent(q);
-
-                // Use the official load-balanced endpoints which handle traffic better
+                
+                // 1. z.overpass-api.de is the official load balancer (most stable)
+                // 2. overpass.private.coffee is a very reliable community mirror
+                // 3. overpass-api.de is the main server (often busy, but good as a last resort)
                 const endpoints = [
-                    'https://overpass-api.de/api/interpreter',
                     'https://z.overpass-api.de/api/interpreter',
-                    'https://lz4.overpass-api.de/api/interpreter',
-                    'https://overpass.kumi.systems/api/interpreter'
+                    'https://overpass.private.coffee/api/interpreter',
+                    'https://overpass-api.de/api/interpreter'
                 ];
 
-                // Robust timeout that doesn't trigger browser "abort" errors
-                const fetchWithTimeout = (url, options, timeout = 20000) => {
-                    return Promise.race([
-                        fetch(url, options),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
-                    ]);
-                };
-
-                const tryEndpoint = async (baseUrl) => {
+                for (const url of endpoints) {
                     try {
-                        // Attempt 1: Raw POST Request (Sending as raw text prevents strict CORS preflight blocks!)
-                        const postRes = await fetchWithTimeout(baseUrl, { 
-                            method: 'POST',
-                            body: q 
-                        });
-                        if (postRes.ok) return await postRes.json();
+                        // Use a simple GET request. This avoids CORS preflight OPTIONS requests 
+                        // which often fail on strict browsers when talking to public APIs.
+                        const requestUrl = `${url}?data=${encodeURIComponent(q)}&_=${Date.now()}`;
                         
-                        // Attempt 2: GET Fallback (If POST fails, try embedding it in the URL)
-                        const getRes = await fetchWithTimeout(`${baseUrl}?data=${encodedQuery}`, { 
-                            method: 'GET'
-                        });
-                        if (getRes.ok) return await getRes.json();
-                        
-                        throw new Error('Endpoint returned error status');
-                    } catch (e) {
-                        throw e; // Bubble the error up so Promise.any can try the next server
-                    }
-                };
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
-                try {
-                    // RACE CONDITION: Fire at all servers. First to reply successfully wins!
-                    return await Promise.any(endpoints.map(endpoint => tryEndpoint(endpoint)));
-                } catch (aggregateError) {
-                    console.error("All map endpoints failed or timed out.");
-                    throw new Error('Map servers are overwhelmed or blocked by network! Try a smaller radius (0.8km).');
+                        const response = await fetch(requestUrl, { 
+                            signal: controller.signal 
+                        });
+                        
+                        clearTimeout(timeoutId);
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP Error: ${response.status}`);
+                        }
+
+                        const data = await response.json();
+                        
+                        // If we get valid JSON back, return it immediately and stop trying other servers.
+                        if (data && data.elements) {
+                            return data;
+                        }
+
+                    } catch (err) {
+                        console.warn(`Server ${url} failed: ${err.message}. Trying next server...`);
+                        // Move to the next server silently
+                    }
                 }
+
+                // If all servers fail
+                throw new Error('All map servers are currently busy! Please wait a moment and try again, or try a smaller radius.');
             }
 
             // --- Main Logic ---
