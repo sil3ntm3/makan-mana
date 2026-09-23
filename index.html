@@ -1,310 +1,843 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Makan Mana?!</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Makan Mana?!</title>
 
-  <!-- Leaflet (OSM maps) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Leaflet (OSM maps) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
-  <!-- Opening hours parser -->
-  <script src="https://cdn.jsdelivr.net/npm/opening_hours@3.10.0/opening_hours.min.js"></script>
+    <!-- Opening hours parser -->
+    <script src="https://cdn.jsdelivr.net/npm/opening_hours@3.10.0/opening_hours.min.js"></script>
 
-  <style>
-    :root { 
-      --bg:#F5DDC2; 
-      --fg:#111; 
-      --muted:#444; 
-      --card:#fff; 
-      --accent:#F45F67; 
-      --border:#ccc; 
-      --radius:16px;
-      --pad:16px;
-      --safe-top: env(safe-area-inset-top, 0px);
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-    }
-    *{box-sizing:border-box}
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // Changed from 'media' to 'class' to allow manual toggle
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Fredoka', 'sans-serif'] },
+                    colors: {
+                        pastel: {
+                            // Deeper, richer light pastels (less blinding)
+                            pink: '#F6A6B9', 
+                            blue: '#91D3C0', 
+                            yellow: '#F4E087',
+                            purple: '#C7A6EB', 
+                            orange: '#F4BC83', 
+                            green: '#AAB5E1',
+                            text: '#4A423F', 
+                            bg: '#FDF5EC',
+                            // Dark mode pastels (midnight/muted aesthetics)
+                            dark: {
+                                pink: '#B85B73',
+                                blue: '#4A918B',
+                                yellow: '#A89240',
+                                purple: '#7C5B9E',
+                                orange: '#A87040',
+                                green: '#5A779C',
+                                text: '#EAE6E1',
+                                bg: '#16141D',
+                                card: '#252331'
+                            }
+                        }
+                    },
+                    boxShadow: {
+                        'soft': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                        'dark-soft': '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3)',
+                        'inner-soft': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)',
+                        'inner-dark': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.3)',
+                    },
+                    animation: {
+                        'bounce-slow': 'bounce 3s infinite',
+                        'pop': 'pop 0.3s ease-out forwards',
+                        'spin-slow': 'spin 8s linear infinite',
+                    },
+                    keyframes: {
+                        pop: {
+                            '0%': { transform: 'scale(0.9)', opacity: '0' },
+                            '50%': { transform: 'scale(1.05)' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: theme('colors.pastel.bg');
+            background-image: radial-gradient(theme('colors.pastel.pink') 2px, transparent 2px), radial-gradient(theme('colors.pastel.blue') 2px, transparent 2px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            color: theme('colors.pastel.text');
+            margin: 0;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            transition: background-color 0.3s, color 0.3s;
+        }
 
-    @media only screen and (max-width: 600px) {
-  body {
-      margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-      background:var(--bg);color:var(--fg);
-      padding-left:max(var(--pad),env(safe-area-inset-left));
-      padding-right:max(var(--pad),env(safe-area-inset-right));
-      margin-top:-30px !important;
-  }
-}
-    body{
-      margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-      background:var(--bg);color:var(--fg);
-      padding-left:max(var(--pad),env(safe-area-inset-left));
-      padding-right:max(var(--pad),env(safe-area-inset-right));
-    }
-    .wrap{max-width:980px;margin:32px auto;padding-top:calc(var(--pad) + var(--safe-top));padding-bottom:calc(var(--pad) + var(--safe-bottom))}
-    h1{margin:0 0 4px;font-size:clamp(44px,2.2vw,32px)}
-    p.small{color:var(--muted);margin:4px 0 16px;line-height: 22px;font-size:clamp(18px,1.4vw,14px)}
-    .grid{display:grid;grid-template-columns:1fr;gap:12px}
-    @media(min-width:900px){.grid{grid-template-columns:360px 1fr}}
-    .panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:var(--pad)}
-    .controls{display:flex;flex-direction:column;gap:12px}
-    .row{display:flex;flex-wrap:wrap;gap:10px}
-    .row>label,.row>button{flex:1 1 160px}
-    label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
-    select,input{background:#fff;color:var(--fg);border:1px solid var(--border);border-radius:999px;padding:12px 14px;min-width:120px;font-size:14px}
-    .hint{font-size:12px;color:var(--muted)}
-    button{border:0;background:var(--accent);color:#fff;padding:14px 16px;border-radius:999px;cursor:pointer;font-weight:600}
-    button.secondary{background:#fff;color:var(--fg);border:1px solid var(--border)}
-    button.warn{background:#f59e0b;color:#fff}
-    button:disabled{opacity:.6;cursor:not-allowed}
-    #map{height:clamp(320px,60vh,520px);border-radius:12px;overflow:hidden;border:1px solid var(--border)}
-    .result{margin-top:12px;margin-bottom:10px;padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff}
-    .title{font-weight:700;font-size:clamp(16px,1.8vw,18px)}
-    .badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-    .badge{font-size:12px;color:#333;background:#eee;border:1px solid #ddd;padding:4px 8px;border-radius:999px}
-    .links{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    a.btn{display:inline-block;padding:10px 12px;border-radius:999px;border:1px solid var(--border);background:var(--accent);color:#fff;flex:1 1 180px;text-align:center;text-decoration:none}
-    .disclaimer{font-size:12px;color:var(--muted);margin-top:8px}
-    footer{color:var(--muted);font-size:12px;margin-top:12px}
-    .banner{margin:8px 0;padding:10px;border-radius:10px;border:1px solid var(--border)}
-    .banner.error{background:#fdd;color:#600;border-color:#7f1d1d}
-    .banner.info{background:#eef;color:#112;border-color:#1f2937}
-  </style>
+        .dark body {
+            background-color: theme('colors.pastel.dark.bg');
+            background-image: radial-gradient(theme('colors.pastel.dark.pink') 2px, transparent 2px), radial-gradient(theme('colors.pastel.dark.blue') 2px, transparent 2px);
+            color: theme('colors.pastel.dark.text');
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: theme('colors.pastel.bg'); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: theme('colors.pastel.pink'); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: theme('colors.pastel.purple'); }
+
+        .dark ::-webkit-scrollbar-track { background: theme('colors.pastel.dark.bg'); }
+        .dark ::-webkit-scrollbar-thumb { background: theme('colors.pastel.dark.pink'); }
+        .dark ::-webkit-scrollbar-thumb:hover { background: theme('colors.pastel.dark.purple'); }
+
+        /* Slot Machine Styles */
+        .slot-machine-container {
+            position: relative;
+            height: 120px;
+            overflow: hidden;
+            border-radius: 1rem;
+            border-width: 4px;
+            border-style: solid;
+        }
+
+        .slot-list {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        .slot-item {
+            height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 0 20px;
+            word-break: break-word;
+        }
+
+        .gradient-text {
+            background: linear-gradient(45deg, #F6A6B9, #C7A6EB);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .dark .gradient-text {
+            background: linear-gradient(45deg, #D9889C, #A788C9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .food-icon {
+             position: absolute;
+             z-index: -1;
+             opacity: 0.7;
+             filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.1));
+             transition: all 0.3s ease;
+        }
+
+        .dark .food-icon {
+            opacity: 0.4;
+            filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.5)) brightness(0.8);
+        }
+
+        /* Map styling adjustments */
+        #map {
+            height: 250px; 
+            border-radius: 1rem;
+            border-width: 2px;
+            border-style: solid;
+            z-index: 1; 
+        }
+
+        /* Custom Select styling */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234A423F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1em;
+        }
+
+        .dark select {
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EAE6E1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        }
+    </style>
 </head>
-<body>
-  <div class="wrap">
-    <h1>Makan Mana?!</h1>
-    <p class="small">Soalan abadi: Makan mana?! 🤔
-<br>Senang je, pilih <b>Radius</b>, <b>Jenis</b>, tekan butang <b>Makan Mana?!</b> dan pilihan restoran secara random diberikan pada anda.
-<br>Rule simple: ikut je cadangan tu.<br>Selamat menjamu selera! 🍜🍔</p>
+<body class="min-h-screen flex flex-col items-center py-8 px-4 relative overflow-x-hidden transition-colors duration-300">
 
-    <div id="banner" class="banner info" hidden></div>
+    <!-- Malaysian Food Floating Icons -->
+    <!-- Nasi Lemak -->
+    <svg class="food-icon top-[5%] left-[-5%] md:left-[5%] w-40 h-40 animate-bounce-slow" style="animation-duration: 4s;" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10,80 Q50,100 90,80 Q100,50 80,20 Q40,0 10,20 Q0,50 10,80 Z" fill="#8FE388" stroke="#4CAF50" stroke-width="2"/>
+        <path d="M20,70 Q50,85 80,70" stroke="#4CAF50" stroke-width="2" fill="none"/>
+        <path d="M30,60 Q50,70 70,60" stroke="#4CAF50" stroke-width="2" fill="none"/>
+        <circle cx="50" cy="50" r="25" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="2"/>
+        <circle cx="45" cy="45" r="5" fill="#F5F5F5"/>
+        <path d="M35,35 Q50,20 65,35 Q70,50 50,60 Q30,50 35,35 Z" fill="#FF6B6B"/>
+        <ellipse cx="70" cy="65" rx="12" ry="8" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1" transform="rotate(-30 70 65)"/>
+        <circle cx="72" cy="63" r="5" fill="#FFD93D"/>
+        <ellipse cx="25" cy="55" rx="8" ry="15" fill="#C8E6C9" stroke="#81C784" stroke-width="2" transform="rotate(20 25 55)"/>
+        <path d="M50,75 Q60,70 65,80 Q55,85 50,75 Z" fill="#BCAAA4"/>
+        <path d="M40,80 Q50,75 55,85 Q45,90 40,80 Z" fill="#BCAAA4"/>
+    </svg>
 
-    <div class="grid">
-      <!-- Controls -->
-      <div class="panel">
-        <div class="controls">
-          <div class="row">
-            <label>Radius
-              <select id="radius">
-                <option value="800">0.8 km</option>
-                <option value="1000" selected>1 km</option>
-                <option value="2000">2 km</option>
-                <option value="3000">3 km</option>
-                <option value="5000">5 km</option>
-              </select>
-            </label>
-            <label>Jenis
-              <select id="type">
-                <option value="restaurant" selected>Restoran</option>
-                <option value="fast_food">Makanan Segera</option>
-                <option value="cafe">Kafe</option>
-                <option value="food_court">Medan Selera</option>
-              </select>
-            </label>
-            <label>Kedai Buka Sekarang
-              <select id="openNow">
-                <option value="">Tak Kisah</option>
-                <option value="1" selected>Ya</option>
-              </select>
-            </label>
-          </div>
-          <div class="row">
-            <button id="btnGo" type="button">Makan Mana?!</button>
-            <button id="btnReroll" type="button" class="secondary" disabled>Pilihan Lain (2)</button>
-            <button id="btnLock" type="button" class="secondary" disabled>Kunci Pilihan</button>
-          </div>
-          <button id="btnUsePin" type="button" class="warn">Gunakan Pin Di Peta Daripada<br>Menggunakan GPS</button>
+    <!-- Teh Tarik -->
+    <svg class="food-icon top-[40%] right-[-10%] md:right-[5%] w-48 h-48 animate-bounce-slow" style="animation-delay: -1.5s; animation-duration: 5s;" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <path d="M25,30 L35,85 Q50,90 65,85 L75,30 Z" fill="#FFCC80" stroke="#FFB74D" stroke-width="2"/>
+        <path d="M73,40 Q90,40 85,60 Q80,75 70,70" fill="none" stroke="#FFCC80" stroke-width="6" stroke-linecap="round"/>
+        <ellipse cx="50" cy="30" rx="25" ry="8" fill="#FFA726"/>
+        <circle cx="40" cy="27" r="4" fill="#FFE0B2" opacity="0.8"/>
+        <circle cx="55" cy="26" r="6" fill="#FFE0B2" opacity="0.8"/>
+        <circle cx="48" cy="29" r="3" fill="#FFE0B2" opacity="0.8"/>
+        <circle cx="62" cy="28" r="4" fill="#FFE0B2" opacity="0.8"/>
+        <circle cx="33" cy="29" r="5" fill="#FFE0B2" opacity="0.8"/>
+        <path d="M50,0 Q55,15 50,28" fill="none" stroke="#FF9800" stroke-width="8" stroke-linecap="round"/>
+        <path d="M50,5 Q55,15 50,25" fill="none" stroke="#FFE0B2" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+    </svg>
+    
+    <!-- Satay -->
+    <svg class="food-icon bottom-[5%] left-[-5%] md:left-[10%] w-56 h-56 animate-bounce-slow" style="animation-delay: -3s; animation-duration: 4.5s;" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <line x1="20" y1="90" x2="60" y2="10" stroke="#D7CCC8" stroke-width="3" stroke-linecap="round"/>
+        <rect x="42" y="25" width="16" height="12" rx="4" fill="#A1887F" transform="rotate(-63.4 50 31)"/>
+        <rect x="36" y="37" width="18" height="12" rx="5" fill="#8D6E63" transform="rotate(-63.4 45 43)"/>
+        <rect x="30" y="49" width="16" height="14" rx="4" fill="#A1887F" transform="rotate(-63.4 38 56)"/>
+        <path d="M42,25 Q50,20 58,25" stroke="#5D4037" stroke-width="2" fill="none" transform="rotate(-63.4 50 31)"/>
+        <line x1="40" y1="95" x2="80" y2="15" stroke="#D7CCC8" stroke-width="3" stroke-linecap="round"/>
+        <rect x="62" y="30" width="15" height="13" rx="4" fill="#8D6E63" transform="rotate(-63.4 69.5 36.5)"/>
+        <rect x="55" y="44" width="18" height="12" rx="5" fill="#795548" transform="rotate(-63.4 64 50)"/>
+        <rect x="48" y="58" width="17" height="13" rx="4" fill="#8D6E63" transform="rotate(-63.4 56.5 64.5)"/>
+        <line x1="60" y1="44" x2="68" y2="56" stroke="#4E342E" stroke-width="2"/>
+        <path d="M70,80 Q85,100 100,80 Z" fill="#E0E0E0"/>
+        <ellipse cx="85" cy="80" rx="15" ry="6" fill="#8D6E63"/>
+        <circle cx="80" cy="78" r="1.5" fill="#D7CCC8"/>
+        <circle cx="88" cy="81" r="1.5" fill="#D7CCC8"/>
+        <circle cx="84" cy="79" r="1" fill="#D7CCC8"/>
+    </svg>
+
+    <div class="max-w-xl w-full bg-white/90 dark:bg-pastel-dark-card/90 backdrop-blur-md rounded-3xl shadow-soft dark:shadow-dark-soft p-6 md:p-8 z-10 border-2 border-white dark:border-slate-700 transition-colors duration-300 relative">
+        
+        <!-- Theme Toggle inside the card -->
+        <div class="absolute top-4 right-4 flex flex-col items-end animate-pop z-50">
+            <button id="themeToggle" class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md w-9 h-9 md:w-10 md:h-10 rounded-full shadow-md text-gray-700 dark:text-gray-200 transition-transform flex items-center justify-center hover:scale-110 active:scale-95 border border-pastel-blue dark:border-pastel-dark-blue">
+                <i class="fa-solid fa-moon dark:hidden text-sm md:text-lg"></i>
+                <i class="fa-solid fa-sun hidden dark:block text-sm md:text-lg"></i>
+            </button>
         </div>
-      </div>
 
-      <!-- Map + Result -->
-      <div class="panel">
-        <div id="result" class="result" hidden></div>
-        <div id="map"></div>
-        <div class="disclaimer">Data mungkin berbeza mengikut kawasan. Sila sahkan status halal dan waktu buka.</div>
-      </div>
+        <header class="text-center mb-6 pt-4">
+            <h1 class="text-4xl md:text-5xl font-bold mb-2 gradient-text">Makan Mana?!</h1>
+            <p class="text-gray-500 dark:text-gray-400 font-medium">Let fate (and GPS) decide your next meal! 😋</p>
+        </header>
+
+        <!-- Banner for messages/errors -->
+        <div id="banner" class="hidden mb-4 p-3 rounded-xl text-center text-sm font-semibold animate-pop transition-colors"></div>
+
+        <!-- The "Slot Machine" Display -->
+        <div class="mb-6 relative">
+            <div class="slot-machine-container bg-white dark:bg-slate-800 border-pastel-purple dark:border-pastel-dark-purple shadow-inner-soft dark:shadow-inner-dark" id="slot-container">
+                <div class="slot-list" id="slot-list">
+                    <!-- Default state -->
+                    <div class="slot-item text-gray-400 dark:text-gray-500 font-bold text-2xl">
+                        Waiting for location... <i class="fa-solid fa-location-dot mt-2 animate-bounce"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Confetti Canvas (Overlay) -->
+            <canvas id="confetti-canvas" class="absolute inset-0 w-full h-full pointer-events-none z-20 hidden"></canvas>
+        </div>
+
+        <div id="result-actions" class="hidden mb-6 animate-pop flex flex-col gap-3">
+            <div class="flex flex-wrap justify-center gap-2 text-xs font-semibold mb-2" id="result-badges">
+                <!-- Badges go here -->
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <a id="btn-waze" href="#" target="_blank" class="bg-[#e5f6fd] hover:bg-[#c9ebf9] dark:bg-[#123A4D] dark:hover:bg-[#1A516B] text-[#1da1f2] dark:text-[#6BC1F7] rounded-xl p-3 flex flex-col items-center justify-center transition-colors shadow-sm">
+                    <i class="fa-brands fa-waze text-xl mb-1"></i> Waze
+                </a>
+                <a id="btn-gmaps" href="#" target="_blank" class="bg-[#fce8e6] hover:bg-[#fad1ce] dark:bg-[#4D1B17] dark:hover:bg-[#66241E] text-[#ea4335] dark:text-[#F28B82] rounded-xl p-3 flex flex-col items-center justify-center transition-colors shadow-sm">
+                    <i class="fa-brands fa-google text-xl mb-1"></i> G Maps
+                </a>
+                <a id="btn-apple" href="#" target="_blank" class="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-800 dark:text-gray-200 rounded-xl p-3 flex flex-col items-center justify-center transition-colors shadow-sm">
+                    <i class="fa-brands fa-apple text-xl mb-1"></i> Apple
+                </a>
+            </div>
+        </div>
+
+        <div class="space-y-4 bg-gray-50/50 dark:bg-slate-800/50 p-4 rounded-2xl border border-pastel-blue dark:border-pastel-dark-blue transition-colors">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                        <i class="fa-solid fa-ruler-horizontal text-pastel-purple dark:text-pastel-dark-purple"></i> Radius
+                    </label>
+                    <select id="radius" class="w-full bg-white dark:bg-slate-700 border-2 border-pastel-purple/50 dark:border-pastel-dark-purple/50 focus:border-pastel-purple dark:focus:border-pastel-dark-purple rounded-xl py-2 px-3 text-gray-700 dark:text-gray-200 outline-none transition-colors font-medium">
+                        <option value="800">0.8 km</option>
+                        <option value="1000" selected>1 km</option>
+                        <option value="2000">2 km</option>
+                        <option value="3000">3 km</option>
+                        <option value="5000">5 km</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                        <i class="fa-solid fa-utensils text-pastel-orange dark:text-pastel-dark-orange"></i> Jenis (Type)
+                    </label>
+                    <select id="type" class="w-full bg-white dark:bg-slate-700 border-2 border-pastel-orange/50 dark:border-pastel-dark-orange/50 focus:border-pastel-orange dark:focus:border-pastel-dark-orange rounded-xl py-2 px-3 text-gray-700 dark:text-gray-200 outline-none transition-colors font-medium">
+                        <option value="restaurant" selected>Restoran</option>
+                        <option value="fast_food">Fast Food</option>
+                        <option value="cafe">Kafe</option>
+                        <option value="food_court">Food Court</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Main Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                <button id="btnGo" class="flex-1 bg-pastel-pink hover:bg-[#E88EA3] dark:bg-pastel-dark-pink dark:hover:bg-[#A14D62] text-gray-800 dark:text-white font-bold py-4 px-4 rounded-xl transition-all transform hover:-translate-y-1 shadow-[0_6px_0_#D8778E] hover:shadow-[0_2px_0_#D8778E] dark:shadow-[0_6px_0_#7A3648] dark:hover:shadow-[0_2px_0_#7A3648] active:translate-y-[4px] active:shadow-none text-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-dice"></i> Makan Mana?!
+                </button>
+                <button id="btnReroll" disabled class="sm:w-1/3 bg-pastel-yellow hover:bg-[#E8D26C] dark:bg-pastel-dark-yellow dark:hover:bg-[#937F35] text-gray-700 dark:text-gray-100 font-bold py-3 px-4 rounded-xl transition-all shadow-[0_4px_0_#D1BA52] active:translate-y-[2px] active:shadow-[0_2px_0_#D1BA52] dark:shadow-[0_4px_0_#736124] dark:active:shadow-[0_2px_0_#736124] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none flex flex-col items-center justify-center text-sm leading-tight">
+                    <span><i class="fa-solid fa-rotate-right"></i> Tukar</span>
+                    <span class="text-xs font-normal" id="reroll-count">(2 left)</span>
+                </button>
+            </div>
+            
+             <button id="btnUsePin" class="w-full mt-2 text-xs font-semibold text-pastel-text/60 dark:text-gray-400 hover:text-pastel-purple dark:hover:text-pastel-dark-purple transition-colors flex items-center justify-center gap-1 py-2">
+                <i class="fa-solid fa-map-pin"></i> Use map pin instead of GPS
+            </button>
+        </div>
+
+        <div class="mt-6 relative">
+            <div id="map" class="border-pastel-blue dark:border-pastel-dark-blue"></div>
+            <div class="absolute bottom-2 right-2 z-[1000] bg-white/80 dark:bg-slate-800/80 backdrop-blur text-[10px] px-2 py-1 rounded-md text-gray-500 dark:text-gray-400 shadow-sm transition-colors">
+                Data by <a href="https://openstreetmap.org" class="underline text-blue-400">OSM</a>
+            </div>
+        </div>
+        
+        <p class="text-center text-[10px] text-gray-400 mt-4 px-4">
+            Disclaimer: Data might vary. Please verify halal status and actual opening hours yourself.
+        </p>
+        <p class="text-center text-[10px] text-pastel-purple dark:text-pastel-dark-purple mt-2 px-4 font-medium flex items-center justify-center gap-1">
+            <i class="fa-solid fa-shield-heart"></i> Privacy Note: We do not store your GPS data. It's only required locally to find food near you!
+        </p>
+
     </div>
 
-    <footer>Dikuasakan OpenStreetMap. Dibangunkan Oleh Ts. Syazani Said.</footer>
-  </div>
+    <!-- Credit Footer -->
+    <footer class="mt-auto pt-8 pb-2 text-center z-10 w-full animate-pop">
+        <p class="text-xs text-gray-600 dark:text-gray-400 font-medium">
+            Created by <a href="https://www.threads.com/@syazanisaid" target="_blank" class="text-pastel-purple dark:text-pastel-dark-purple hover:text-pastel-pink dark:hover:text-pastel-dark-pink transition-colors font-bold underline decoration-wavy decoration-1 underline-offset-2">Ts. Syazani Said</a>
+        </p>
+    </footer>
 
-<script>
-// --- Map Init ---
-let map = L.map('map');
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'©OSM ©CARTO'}).addTo(map);
-map.setView([3.139,101.6869],13);
-let userMarker, pickMarker, circle;
-let usePin=false;
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- UI Elements ---
+            const slotList = document.getElementById('slot-list');
+            const resultActions = document.getElementById('result-actions');
+            const resultBadges = document.getElementById('result-badges');
+            const banner = document.getElementById('banner');
+            const btnGo = document.getElementById('btnGo');
+            const btnReroll = document.getElementById('btnReroll');
+            const rerollCountText = document.getElementById('reroll-count');
+            const btnUsePin = document.getElementById('btnUsePin');
+            
+            // Links
+            const btnWaze = document.getElementById('btn-waze');
+            const btnGmaps = document.getElementById('btn-gmaps');
+            const btnApple = document.getElementById('btn-apple');
 
-// --- App State ---
-let candidates = [];     
-let currentPick = null;  
-let lastLoc = null;      
-let rerollsLeft = 2;
+            // --- App State ---
+            let map, userMarker, pickMarker, searchCircle, tileLayer;
+            let usePin = false;
+            let candidates = [];
+            let currentPick = null;
+            let lastLoc = null;
+            let rerollsLeft = 2;
+            let isSpinning = false;
+            let hasInitializedMap = false;
 
-// --- Dom refs ---
-const elResult  = document.getElementById('result');
-const elBanner  = document.getElementById('banner');
-const btnGo     = document.getElementById('btnGo');
-const btnReroll = document.getElementById('btnReroll');
-const btnLock   = document.getElementById('btnLock');
+            // API Keys
+            const CARTO_API_KEY = 'cb1_3upm_1_b0996531c42cb827a121e5bd';
 
-// --- Helpers ---
-function setBanner(text, kind='info'){
-  if(!text){ elBanner.hidden = true; return; }
-  elBanner.textContent = text;
-  elBanner.className = `banner ${kind}`;
-  elBanner.hidden = false;
-}
-function haversine(lat1,lon1,lat2,lon2){
-  const R=6371000;const toRad=x=>x*Math.PI/180;
-  const dLat=toRad(lat2-lat1),dLon=toRad(lon2-lon1);
-  const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
-  return 2*R*Math.asin(Math.sqrt(a));
-}
-function buildOverpassQuery({lat,lng,radius,type}){
-  const around=`around:${radius},${lat},${lng}`;
-  const types=['node','way','relation'];
-  const amenity={restaurant:'restaurant',cafe:'cafe',fast_food:'fast_food',food_court:'food_court'}[type]||'restaurant';
-  return `[out:json][timeout:25];
-(${types.map(t=>`${t}(${around})[amenity=${amenity}];`).join('\n')});
-out center tags;`;
-}
-async function overpass(q){
-  const urls=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://z.overpass-api.de/api/interpreter'];
-  for(const u of urls){
-    try{
-      const r=await fetch(u,{method:'POST',body:q,headers:{'Content-Type':'text/plain'}});
-      if(r.ok) return await r.json();
-    }catch(e){ console.warn('Overpass fail',u,e); }
-  }
-  throw new Error('All Overpass endpoints failed');
-}
-function showResult(place,userLatLng){
-  const el=elResult;
-  if(!place){el.hidden=false;el.textContent='No places found.';return;}
-  const dist=Math.round(place._distance);
-  const name=place.tags.name||'(Unnamed place)';
-  const cuisine=place.tags.cuisine?String(place.tags.cuisine).split(';').join(', '):'(Unspecified)';
-  const isOpen=(function(tag){try{if(!tag)return null;return new opening_hours(tag).getState();}catch(e){return null;}})(place.tags['opening_hours']);
-  const openStr=(isOpen===null)?'hours unknown':(isOpen?'open now':'closed now');
-  const lat=place.lat,lon=place.lon;
-  const waze=`https://waze.com/ul?ll=${lat}%2C${lon}&navigate=yes`;
-  const apple=`https://maps.apple.com/?daddr=${lat},${lon}`;
-  const gmaps=`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
-  el.hidden=false;
-  el.innerHTML = `
-    <div class="title">${name}</div>
-    <div class="badges">
-      <span class="badge">cuisine: ${cuisine}</span>
-      <span class="badge">${dist} m away</span>
-      <span class="badge">${openStr}</span>
-    </div>
-    <div class="links">
-      <a class="btn" href="${waze}" target="_blank">Buka di Waze</a>
-      <a class="btn" href="${apple}" target="_blank">Buka di Apple Maps</a>
-      <a class="btn" href="${gmaps}" target="_blank">Buka di Google Maps</a>
-    </div>`;
-}
-function setPick(pick){
-  currentPick = pick;
-  if(!pick || !lastLoc){ btnLock.disabled = true; return; }
-  if(pickMarker) pickMarker.remove();
-  pickMarker = L.marker([pick.lat, pick.lon], { title: pick.tags.name || 'Pick' }).addTo(map);
-  map.panTo([pick.lat, pick.lon]);
-  showResult(pick, lastLoc);
-  btnLock.disabled = false;
-  btnReroll.disabled = rerollsLeft <= 0 || (candidates.length <= 1);
-  btnReroll.textContent = `Pilihan Lain (${rerollsLeft})`;
-}
-function randomDifferentPick(){
-  if(!candidates.length) return null;
-  if(candidates.length === 1) return candidates[0];
-  let p;
-  for(let i=0;i<5;i++){p=candidates[Math.floor(Math.random()*candidates.length)];if(!currentPick || p.id!==currentPick.id) break;}
-  return p;
-}
-async function run(){
-  try{
-    setBanner('');btnLock.disabled = true;btnReroll.disabled = true;
+            // --- Theme Management ---
+            const htmlElement = document.documentElement;
+            const themeToggleBtn = document.getElementById('themeToggle');
+            
+            function getTileUrl(isDark) {
+                const style = isDark ? 'dark_all' : 'voyager';
+                return `https://{s}.basemaps.cartocdn.com/rastertiles/${style}/{z}/{x}/{y}.png?key=${CARTO_API_KEY}`;
+            }
 
-    const radius = Number(document.getElementById('radius').value);
-    const type   = document.getElementById('type').value;
+            function getInitialTheme() {
+                const saved = localStorage.getItem('theme');
+                if (saved) {
+                    return saved;
+                }
+                // Default to light theme as requested
+                return 'light';
+            }
+            
+            let currentTheme = getInitialTheme();
+            
+            function applyTheme(theme) {
+                if (theme === 'dark') {
+                    htmlElement.classList.add('dark');
+                } else {
+                    htmlElement.classList.remove('dark');
+                }
+                
+                if (tileLayer && map) {
+                    tileLayer.setUrl(getTileUrl(theme === 'dark'));
+                }
+                
+                if (searchCircle) {
+                    searchCircle.setStyle({
+                        color: theme === 'dark' ? '#5A779C' : '#AAB5E1', 
+                        fillColor: theme === 'dark' ? '#4A918B' : '#91D3C0'
+                    });
+                }
+            }
+            
+            // Apply theme immediately on load
+            applyTheme(currentTheme);
 
-    const loc = await getLocation();lastLoc = loc;
+            themeToggleBtn.addEventListener('click', () => {
+                currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+                localStorage.setItem('theme', currentTheme);
+                applyTheme(currentTheme);
+            });
 
-    if(!userMarker) userMarker = L.marker([loc.lat,loc.lng],{title:'You'}).addTo(map);
-    userMarker.setLatLng([loc.lat,loc.lng]);map.setView([loc.lat,loc.lng],15);
+            // --- Audio ---
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            function playBeep(frequency, duration, type = 'sine') {
+                if(audioCtx.state === 'suspended') audioCtx.resume();
+                try {
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    oscillator.type = type;
+                    oscillator.frequency.value = frequency;
+                    gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    oscillator.start();
+                    oscillator.stop(audioCtx.currentTime + duration);
+                } catch(e) { }
+            }
 
-    if(circle) circle.remove();
-    circle = L.circle([loc.lat,loc.lng],{radius,color:'#333'}).addTo(map);
+            function playWinSound() {
+                playBeep(523.25, 0.1); 
+                setTimeout(() => playBeep(659.25, 0.1), 100);
+                setTimeout(() => playBeep(783.99, 0.3), 200); 
+            }
 
-    const q = buildOverpassQuery({lat:loc.lat,lng:loc.lng,radius,type});
-    const data = await overpass(q);
+            // --- Initialization ---
+            function initMap(lat = 3.139, lng = 101.6869) {
+                if(hasInitializedMap) return;
+                hasInitializedMap = true;
+                
+                map = L.map('map', { zoomControl: false });
+                L.control.zoom({ position: 'topright' }).addTo(map);
 
-    candidates = (data.elements||[])
-      .map(e=>({id:e.id,lat:e.lat||e.center?.lat,lon:e.lon||e.center?.lon,tags:e.tags||{}}))
-      .filter(e=>e.lat&&e.lon);
+                tileLayer = L.tileLayer(getTileUrl(currentTheme === 'dark'), {
+                    attribution: '&copy; OpenStreetMap, &copy; CARTO',
+                    subdomains: 'abcd',
+                    maxZoom: 20
+                }).addTo(map);
+                
+                map.setView([lat, lng], 13);
+                
+                setSlotMessage("Ready to find food!", "text-pastel-purple dark:text-pastel-dark-purple");
+            }
 
-    candidates.forEach(p=>p._distance=haversine(loc.lat,loc.lng,p.lat,p.lon));
+            setTimeout(() => { if(!hasInitializedMap) initMap(); }, 500);
 
-    if(!candidates.length){
-      showResult(null, loc);
-      setBanner('No places found in that area with those filters.','error');
-      return;
-    }
+            // --- Helper Functions ---
+            function showBanner(msg, type = 'error') {
+                if(!msg) { banner.classList.add('hidden'); return; }
+                banner.textContent = msg;
+                
+                if (type === 'error') {
+                    banner.className = `mb-4 p-3 rounded-xl text-center text-sm font-semibold animate-pop bg-red-100 text-red-600 border border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-800`;
+                    setTimeout(() => banner.classList.add('hidden'), 5000);
+                } else if (type === 'info') {
+                    banner.className = `mb-4 p-3 rounded-xl text-center text-sm font-semibold animate-pop bg-pastel-blue text-teal-800 dark:bg-pastel-dark-blue dark:text-teal-100`;
+                }
+                banner.classList.remove('hidden');
+            }
 
-    rerollsLeft = 2;
-    setPick(randomDifferentPick());
-  }catch(e){
-    elResult.hidden=false;
-    elResult.innerHTML='<div style="color:#c00">Error: '+(e.message||e)+'</div>';
-  }
-}
-function getLocation(){
-  if(usePin){const c=map.getCenter();return Promise.resolve({lat:c.lat,lng:c.lng});}
-  return new Promise((res,rej)=>{
-    if(!navigator.geolocation) return rej('Geolocation unsupported');
-    navigator.geolocation.getCurrentPosition(
-      p=>res({lat:p.coords.latitude,lng:p.coords.longitude}),
-      e=>rej(e.message||'Permission/timeout'),
-      {enableHighAccuracy:true,timeout:15000}
-    );
-  });
-}
+            function setSlotMessage(msg, colorClass = "text-gray-500 dark:text-gray-400", icon = "") {
+                resultActions.classList.add('hidden');
+                slotList.style.transition = 'none';
+                slotList.style.top = '0px';
+                slotList.innerHTML = `
+                    <div class="slot-item ${colorClass} font-bold text-xl md:text-2xl">
+                        ${msg} ${icon ? `<i class="${icon} mt-2 text-3xl"></i>` : ''}
+                    </div>`;
+            }
 
-// --- Buttons ---
-btnGo.addEventListener('click', run);
-document.getElementById('btnUsePin').addEventListener('click', ()=>{
-  usePin=true;
-  alert('Mode Pin ON. Gerakkan peta untuk lokasi, kemudian tekan “Makan Mana?!”.');
-});
-btnReroll.addEventListener('click', e=>{
-  e.preventDefault();
-  if(rerollsLeft<=0) return;
-  const next=randomDifferentPick();
-  if(next){rerollsLeft--;setPick(next);}
-});
-btnLock.addEventListener('click', e=>{
-  e.preventDefault();
-  if(!currentPick) return;
-  const history=JSON.parse(localStorage.getItem('lockedChoices')||'[]');
-  history.push({
-    id:currentPick.id,
-    name:currentPick.tags.name||'(Unnamed place)',
-    lat:currentPick.lat,
-    lon:currentPick.lon,
-    at:new Date().toISOString()
-  });
-  localStorage.setItem('lockedChoices',JSON.stringify(history));
-  setBanner('✅ Pilihan Muktamad! Selamat makan dan jangan tukar lokasi ya. 😋');
-  btnLock.disabled=true;
-  btnReroll.disabled=true;
-});
-</script>
+            function haversine(lat1, lon1, lat2, lon2) {
+                const R = 6371e3; 
+                const φ1 = lat1 * Math.PI/180;
+                const φ2 = lat2 * Math.PI/180;
+                const Δφ = (lat2-lat1) * Math.PI/180;
+                const Δλ = (lon2-lon1) * Math.PI/180;
+                const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return R * c;
+            }
+
+            async function getLocation() {
+                if(usePin) {
+                    const c = map.getCenter();
+                    return { lat: c.lat, lng: c.lng };
+                }
+                
+                return new Promise((resolve, reject) => {
+                    if (!navigator.geolocation) {
+                        showBanner('Geolocation restricted. Using Cyberjaya map view.', 'info');
+                        return resolve({ lat: 2.9213, lng: 101.6559 }); 
+                    }
+                    
+                    navigator.geolocation.getCurrentPosition(
+                        pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                        err => {
+                            showBanner('Location access denied. Using Cyberjaya view.', 'info');
+                            resolve({ lat: 2.9213, lng: 101.6559 }); 
+                        },
+                        { enableHighAccuracy: true, timeout: 10000 }
+                    );
+                });
+            }
+
+            function buildOverpassQuery(lat, lng, radius, type) {
+                const around = `around:${radius},${lat},${lng}`;
+                const amenity = {
+                    restaurant: 'restaurant', cafe: 'cafe', fast_food: 'fast_food', food_court: 'food_court'
+                }[type] || 'restaurant';
+                
+                return `[out:json][timeout:25];
+                    (
+                        node(${around})[amenity=${amenity}];
+                        way(${around})[amenity=${amenity}];
+                        relation(${around})[amenity=${amenity}];
+                    );
+                    out center tags;`;
+            }
+
+            async function fetchPlaces(lat, lng, radius, type) {
+                const q = buildOverpassQuery(lat, lng, radius, type);
+                const bodyData = 'data=' + encodeURIComponent(q); // Properly encode for Overpass
+
+                // List of most reliable public Overpass instances
+                const endpoints = [
+                    'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+                    'https://overpass-api.de/api/interpreter',
+                    'https://lz4.overpass-api.de/api/interpreter',
+                    'https://z.overpass-api.de/api/interpreter',
+                    'https://overpass.private.coffee/api/interpreter'
+                ];
+
+                let lastError = null;
+
+                for (const url of endpoints) {
+                    // Use standard AbortController for universal browser compatibility
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 20000); // Increased to 20 seconds per server
+
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST', 
+                            body: bodyData,
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            signal: controller.signal
+                        });
+                        
+                        clearTimeout(timeoutId); // Clear timeout if successful
+                        
+                        if (response.ok) {
+                            return await response.json(); // Success!
+                        } else {
+                            console.warn(`Overpass returned HTTP ${response.status} on ${url}`);
+                        }
+                    } catch (e) {
+                        clearTimeout(timeoutId);
+                        console.warn(`Overpass fetch failed on ${url}:`, e);
+                        lastError = e;
+                    }
+                }
+                
+                console.error("All map endpoints failed. Last error:", lastError);
+                throw new Error('Map servers are busy or blocked! Please try again in a moment.');
+            }
+
+            // --- Main Logic ---
+            async function searchAndSpin() {
+                if(isSpinning) return;
+                
+                showBanner(''); 
+                btnGo.disabled = true;
+                btnReroll.disabled = true;
+
+                try {
+                    setSlotMessage("Getting location...", "text-pastel-orange dark:text-pastel-dark-orange", "fa-solid fa-location-crosshairs fa-beat-fade");
+                    const loc = await getLocation();
+                    lastLoc = loc;
+                    initMap(loc.lat, loc.lng);
+
+                    if(userMarker) userMarker.remove();
+                    const userIcon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div style="background-color:#F45F67; width:16px; height:16px; border-radius:50%; border:3px solid white; box-shadow:0 0 5px rgba(0,0,0,0.5);"></div>`,
+                        iconSize: [16, 16], iconAnchor: [8, 8]
+                    });
+                    userMarker = L.marker([loc.lat, loc.lng], {icon: userIcon}).addTo(map);
+                    
+                    const radius = Number(document.getElementById('radius').value);
+                    const type = document.getElementById('type').value;
+
+                    if(searchCircle) searchCircle.remove();
+                    searchCircle = L.circle([loc.lat, loc.lng], {
+                        radius: radius, // FIX: This visually changes the map circle to match your selection!
+                        color: currentTheme === 'dark' ? '#5A779C' : '#AAB5E1', 
+                        fillColor: currentTheme === 'dark' ? '#4A918B' : '#91D3C0',
+                        fillOpacity: 0.2, weight: 2
+                    }).addTo(map);
+
+                    map.fitBounds(searchCircle.getBounds(), { padding: [20, 20] });
+
+                    // Playful loading message
+                    const waitMessages = [
+                        "Please wait! I'm asking the free map servers... 🐢",
+                        "Sniffing out the best food nearby... 👃🍜",
+                        "Hold on tight, querying OpenStreetMap... 🗺️",
+                        "Rummaging through data to find your meal... 🍔"
+                    ];
+                    const randomWaitMsg = waitMessages[Math.floor(Math.random() * waitMessages.length)];
+                    
+                    setSlotMessage(randomWaitMsg, "text-pastel-blue dark:text-pastel-dark-blue text-lg", "fa-solid fa-magnifying-glass fa-shake");
+                    
+                    const data = await fetchPlaces(loc.lat, loc.lng, radius, type);
+
+                    candidates = (data.elements || [])
+                        .map(e => ({
+                            id: e.id, lat: e.lat || e.center?.lat, lon: e.lon || e.center?.lon, tags: e.tags || {}
+                        }))
+                        .filter(e => e.lat && e.lon && e.tags.name);
+
+                    if(candidates.length === 0) {
+                        setSlotMessage("Alamak! Kosong. 😭", "text-red-400", "fa-regular fa-face-frown-open");
+                        
+                        const playfulErrors = [
+                            "Aiyo, no food found here! 🏜️ Maybe expand your Radius?",
+                            "Crickets... 🦗 Try changing the 'Jenis' (Type) to cast a wider net!",
+                            "Too picky! No places match this search. Try a bigger area? 🤷‍♂️"
+                        ];
+                        showBanner(playfulErrors[Math.floor(Math.random() * playfulErrors.length)], 'error');
+                        btnGo.disabled = false;
+                        return;
+                    }
+
+                    candidates.forEach(p => p._distance = haversine(loc.lat, loc.lng, p.lat, p.lon));
+                    rerollsLeft = 2;
+                    currentPick = null;
+                    spinToWinner(getRandomDifferentPick());
+
+                } catch (error) {
+                    setSlotMessage("Oops! Error occurred.", "text-red-500", "fa-solid fa-triangle-exclamation");
+                    showBanner(error.message, 'error');
+                    btnGo.disabled = false;
+                }
+            }
+
+            function getRandomDifferentPick() {
+                if (!candidates.length) return null;
+                if (candidates.length === 1) return candidates[0];
+                let p;
+                for (let i = 0; i < 10; i++) {
+                    p = candidates[Math.floor(Math.random() * candidates.length)];
+                    if (!currentPick || p.id !== currentPick.id) break;
+                }
+                return p;
+            }
+
+            function spinToWinner(winner) {
+                if(!winner || isSpinning) return;
+                
+                isSpinning = true;
+                currentPick = winner;
+                resultActions.classList.add('hidden');
+                btnGo.disabled = true;
+                btnReroll.disabled = true;
+
+                const spinDuration = 3500;
+                const itemHeight = 120;
+                const totalItems = 25; 
+                
+                let html = `<div class="slot-item text-gray-400 dark:text-gray-500 font-bold text-xl"><i class="fa-solid fa-spinner fa-spin"></i> Choosing...</div>`;
+                
+                for(let i=0; i<totalItems-2; i++) {
+                    const randomCand = candidates[Math.floor(Math.random() * candidates.length)];
+                    const name = randomCand.tags.name || "Unknown Place";
+                    const shortName = name.length > 25 ? name.substring(0,25) + '...' : name;
+                    html += `<div class="slot-item text-gray-700 dark:text-gray-300 font-medium text-lg md:text-xl px-4">${shortName}</div>`;
+                }
+
+                const winnerName = winner.tags.name || '(Unnamed Place)';
+                const distStr = Math.round(winner._distance) + 'm';
+                
+                html += `
+                    <div class="slot-item bg-pastel-yellow/30 dark:bg-pastel-dark-yellow/20 px-2 py-4 rounded-xl border border-transparent dark:border-pastel-dark-yellow/30">
+                        <div class="text-2xl md:text-3xl font-extrabold text-gray-800 dark:text-gray-100 leading-tight">${winnerName}</div>
+                        <div class="text-sm font-semibold text-pastel-purple dark:text-pastel-dark-purple mt-2"><i class="fa-solid fa-person-walking"></i> ${distStr} away</div>
+                    </div>`;
+
+                slotList.innerHTML = html;
+                slotList.style.transition = 'none';
+                slotList.style.top = '0px';
+
+                let tickInt = setInterval(() => playBeep(800, 0.03, 'square'), 120);
+
+                setTimeout(() => {
+                    slotList.style.transition = `top ${spinDuration}ms cubic-bezier(0.1, 0.8, 0.2, 1)`;
+                    const targetTop = -((totalItems - 1) * itemHeight);
+                    slotList.style.top = `${targetTop}px`;
+                }, 50);
+
+                setTimeout(() => {
+                    clearInterval(tickInt);
+                    isSpinning = false;
+                    playWinSound();
+                    showResultDetails(winner);
+                    
+                    slotList.lastElementChild.classList.add('animate-pop');
+                    
+                    btnGo.disabled = false;
+                    updateRerollButton();
+                }, spinDuration + 100);
+            }
+
+            function showResultDetails(place) {
+                if(pickMarker) pickMarker.remove();
+                
+                const pinIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div style="font-size: 32px; color: #F45F67; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); animation: bounce 1s infinite;"><i class="fa-solid fa-location-dot"></i></div>`,
+                    iconSize: [32, 32], iconAnchor: [16, 32]
+                });
+
+                pickMarker = L.marker([place.lat, place.lon], {icon: pinIcon}).addTo(map);
+                
+                if (userMarker) {
+                    const group = new L.featureGroup([userMarker, pickMarker]);
+                    map.fitBounds(group.getBounds(), { padding: [30, 30], maxZoom: 17 });
+                } else {
+                    map.setView([place.lat, place.lon], 16);
+                }
+
+                const cuisine = place.tags.cuisine ? String(place.tags.cuisine).replace(/;/g, ', ') : '';
+                
+                let ohState = null;
+                try {
+                    if (place.tags['opening_hours']) {
+                        ohState = new opening_hours(place.tags['opening_hours']).getState();
+                    }
+                } catch(e) {}
+                
+                let badgesHtml = '';
+                if(cuisine) {
+                    badgesHtml += `<span class="bg-pastel-pink/50 text-pink-800 dark:bg-pink-900/40 dark:text-pink-200 px-3 py-1 rounded-full border border-pink-200 dark:border-pink-800 capitalize">${cuisine}</span>`;
+                }
+                
+                if(ohState !== null) {
+                    if(ohState) badgesHtml += `<span class="bg-pastel-green/50 text-green-800 dark:bg-green-900/40 dark:text-green-200 px-3 py-1 rounded-full border border-green-200 dark:border-green-800"><i class="fa-solid fa-door-open"></i> Open Now</span>`;
+                    else badgesHtml += `<span class="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200 px-3 py-1 rounded-full border border-red-200 dark:border-red-800"><i class="fa-solid fa-door-closed"></i> Closed</span>`;
+                }
+
+                resultBadges.innerHTML = badgesHtml;
+
+                const lat = place.lat;
+                const lon = place.lon;
+                
+                btnWaze.href = `https://waze.com/ul?ll=${lat}%2C${lon}&navigate=yes`;
+                btnApple.href = `https://maps.apple.com/?daddr=${lat},${lon}`;
+                btnGmaps.href = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
+
+                resultActions.classList.remove('hidden');
+            }
+
+            function updateRerollButton() {
+                if(rerollsLeft > 0 && candidates.length > 1) {
+                    btnReroll.disabled = false;
+                    rerollCountText.textContent = `(${rerollsLeft} left)`;
+                } else {
+                    btnReroll.disabled = true;
+                    rerollCountText.textContent = candidates.length <= 1 ? "(Only 1 option)" : "(No more)";
+                }
+            }
+
+            // --- Event Listeners ---
+            btnGo.addEventListener('click', searchAndSpin);
+            
+            btnReroll.addEventListener('click', () => {
+                if(rerollsLeft > 0 && !isSpinning) {
+                    rerollsLeft--;
+                    spinToWinner(getRandomDifferentPick());
+                }
+            });
+
+            btnUsePin.addEventListener('click', () => {
+                usePin = !usePin;
+                if(usePin) {
+                    initMap(); 
+                    btnUsePin.innerHTML = `<i class="fa-solid fa-location-crosshairs"></i> Use my GPS instead`;
+                    btnUsePin.classList.add('text-pastel-purple', 'dark:text-pastel-dark-purple');
+                    showBanner('Map Pin Mode ON. Drag the map to a location, then click "Makan Mana?!"', 'info');
+                    
+                    const mapEl = document.getElementById('map');
+                    if(!document.getElementById('map-crosshair')) {
+                        const crosshair = document.createElement('div');
+                        crosshair.id = 'map-crosshair';
+                        crosshair.innerHTML = '<i class="fa-solid fa-plus text-red-500 text-2xl drop-shadow-md"></i>';
+                        crosshair.className = 'absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[500]';
+                        mapEl.parentElement.appendChild(crosshair);
+                    }
+                } else {
+                    btnUsePin.innerHTML = `<i class="fa-solid fa-map-pin"></i> Use map pin instead of GPS`;
+                    btnUsePin.classList.remove('text-pastel-purple', 'dark:text-pastel-dark-purple');
+                    showBanner('');
+                    const cross = document.getElementById('map-crosshair');
+                    if(cross) cross.remove();
+                }
+            });
+            
+            if(navigator.permissions) {
+                 navigator.permissions.query({name: 'geolocation'}).then(result => {
+                     if(result.state === 'granted') {
+                         initMap();
+                         getLocation().then(loc => {
+                             map.setView([loc.lat, loc.lng], 14);
+                             hasInitializedMap = true;
+                         }).catch(e=>{});
+                     }
+                 });
+            }
+        });
+    </script>
 </body>
 </html>
