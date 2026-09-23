@@ -542,48 +542,63 @@
 
             async function fetchPlaces(lat, lng, radius, type) {
                 const q = buildOverpassQuery(lat, lng, radius, type);
-                const bodyData = 'data=' + encodeURIComponent(q); // Properly encode for Overpass
+                const encodedQuery = encodeURIComponent(q);
 
                 // List of most reliable public Overpass instances
                 const endpoints = [
-                    'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
                     'https://overpass-api.de/api/interpreter',
+                    'https://overpass.private.coffee/api/interpreter',
                     'https://lz4.overpass-api.de/api/interpreter',
                     'https://z.overpass-api.de/api/interpreter',
-                    'https://overpass.private.coffee/api/interpreter'
+                    'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
                 ];
 
                 let lastError = null;
 
-                for (const url of endpoints) {
-                    // Use standard AbortController for universal browser compatibility
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 20000); // Increased to 20 seconds per server
-
+                for (const baseUrl of endpoints) {
                     try {
-                        const response = await fetch(url, {
-                            method: 'POST', 
-                            body: bodyData,
-                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            signal: controller.signal
-                        });
-                        
-                        clearTimeout(timeoutId); // Clear timeout if successful
+                        // Attempt 1: Standard POST request (More reliable for map queries)
+                        const response = await Promise.race([
+                            fetch(baseUrl, { 
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                                    'Accept': 'application/json'
+                                },
+                                body: 'data=' + encodedQuery
+                            }),
+                            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 25s')), 25000))
+                        ]);
                         
                         if (response.ok) {
-                            return await response.json(); // Success!
+                            return await response.json(); 
                         } else {
-                            console.warn(`Overpass returned HTTP ${response.status} on ${url}`);
+                            console.warn(`Overpass returned HTTP ${response.status} on ${baseUrl}`);
                         }
                     } catch (e) {
-                        clearTimeout(timeoutId);
-                        console.warn(`Overpass fetch failed on ${url}:`, e);
-                        lastError = e;
+                        console.warn(`Overpass POST failed on ${baseUrl}:`, e);
+                        
+                        // Attempt 2: Fallback to GET request (Sometimes bypasses strict CORS preflight blocks in Safari/iframes)
+                        try {
+                            const getUrl = `${baseUrl}?data=${encodedQuery}`;
+                            const getResponse = await Promise.race([
+                                fetch(getUrl, { 
+                                    method: 'GET',
+                                    headers: { 'Accept': 'application/json' }
+                                }),
+                                new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 25s')), 25000))
+                            ]);
+                            if (getResponse.ok) {
+                                return await getResponse.json();
+                            }
+                        } catch (err2) {
+                            lastError = err2 || e;
+                        }
                     }
                 }
                 
                 console.error("All map endpoints failed. Last error:", lastError);
-                throw new Error('Map servers are busy or blocked! Please try again in a moment.');
+                throw new Error('Map servers blocked or busy! (Check ad-blockers or try again later)');
             }
 
             // --- Main Logic ---
